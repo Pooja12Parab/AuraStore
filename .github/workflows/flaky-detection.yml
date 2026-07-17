@@ -68,10 +68,14 @@ jobs:
       - name: Analyze flaky tests
         run: node scripts/analyze-flaky.js flaky-report-1.json flaky-report-2.json flaky-report-3.json
 
+      - name: Zip flaky reports
+        run: |
+          zip -r flaky-reports.zip flaky-report-1.json flaky-report-2.json flaky-report-3.json || echo "No reports to zip"
+
       - name: Upload flaky reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: flaky-reports
-          path: flaky-report-*.json
+          path: flaky-reports.zip
           retention-days: 7
