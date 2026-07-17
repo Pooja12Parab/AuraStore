@@ -35,6 +35,11 @@ jobs:
             sleep 2
           done
 
+      - name: Run seed
+        run: cd backend && npm run seed
+        env:
+          STRAPI_API_TOKEN: ${{ secrets.STRAPI_API_TOKEN }}
+
       - name: Run E2E tests (attempt 1)
         run: pnpm exec playwright test --reporter=json --output=flaky-report-1.json || true
         env:

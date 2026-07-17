@@ -133,10 +133,12 @@ jobs:
     steps:
       - name: Report status
         run: |
+          unit_result="${{ needs.unit-and-integration.result }}"
+          e2e_result="${{ needs.e2e.result }}"
           echo "=== Test Suite Complete ==="
-          echo "Unit & Integration: ${{ needs.unit-and-integration.result }}"
-          echo "E2E: ${{ needs.e2e.result }}"
-          if result == 'success'; then
+          echo "Unit & Integration: $unit_result"
+          echo "E2E: $e2e_result"
+          if [ "$unit_result" = "success" ] && [ "$e2e_result" = "success" ]; then
             echo "All tests passed."
           else
             echo "Some tests failed. Check artifacts for details."
