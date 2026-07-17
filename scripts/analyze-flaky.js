@@ -1,4 +1,4 @@
-const { readFileSync } = require('fs');
+import { readFileSync } from 'fs';
 
 const reports = process.argv.slice(2).map((p) => JSON.parse(readFileSync(p, 'utf8')));
 

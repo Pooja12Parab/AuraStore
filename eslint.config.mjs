@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "e2e/**",
     "src/__tests__/**",
+    "backend/**",
   ]),
 ]);
 

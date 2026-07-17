@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 
 const links = [
@@ -13,10 +13,6 @@ const links = [
 export function Nav() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    setOpen(false)
-  }, [pathname])
 
   return (
     <nav aria-label="Primary" className="flex items-center">
@@ -41,6 +37,7 @@ export function Nav() {
       {open && (
         <div
           id="nav-mobile-panel"
+          key={pathname}
           data-testid="nav-mobile-panel"
           className="absolute left-0 right-0 top-full z-20 flex flex-col gap-2 border-b bg-white px-4 py-3 shadow-md md:hidden"
         >
