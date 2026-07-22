@@ -261,7 +261,7 @@ export const orderPendingFixture = OrderModel.create({
 | Layer | Mock approach |
 |-------|---------------|
 | **Unit (`cartStore`, `AddressForm`, signature helper)** | No Razorpay SDK at all; pure functions. |
-| **Integration (`POST /api/orders/create`)** | `vi.mock("razorpay")` — replace `Razorpay` with a stub whose `orders.create` resolves a fake `{ id, amount, currency }` or rejects with a controlled error. |
+| **Integration (`POST /api/orders/create`)** | `vi.mock("razorpay")` — replace `Razorpay` with a stub whose `orders.create` resolves a fake `{ id, amount, amount_paid, amount_due, currency, receipt, status, attempts, created_at }` or rejects with a controlled error. **All `amount` values in mocks are in paise** (e.g. 2 × ₹2,49,900 = `49980000` paise). |
 | **Integration (`POST /api/webhooks/razorpay`)** | No Razorpay SDK involved. The handler is tested with hand-crafted request payloads and HMAC-signed headers (using a test secret from `process.env.RAZORPAY_WEBHOOK_SECRET` in the test setup). |
 | **Component (`RazorpayCheckout`)** | `window.Razorpay` is stubbed globally: a function that records its options and immediately calls `options.handler({ razorpay_order_id, razorpay_payment_id, razorpay_signature: "test_sig" })`. |
 | **E2E (`payment.spec.ts`)** | Real Razorpay Test Mode modal with card `4111 1111 1111 1111`. The `payment-failure.spec.ts` uses `4000 0000 0000 0002`. |
@@ -319,7 +319,7 @@ Alternative if a project split is undesired: keep all specs under `tests/e2e/`, 
 
 **Total: 22 unit tests.** Each test ID follows the pattern `U-P2-<area>-<n>`.
 
-### 5.1 `tests/unit/cart.test.ts` (8 tests)
+### 5.1 `tests/unit/cart.test.ts` (9 tests)
 
 ```ts
 import { describe, it, expect, beforeEach, vi } from "vitest";
@@ -386,7 +386,7 @@ describe("U-P2-cart: cartStore external store", () => {
 });
 ```
 
-> 8 tests above; the 8th counts toward persistence. The full 8-test file is `tests/unit/cart.test.ts` covering: empty, add-new, add-increment, set0-removes, setN-updates, remove, totalQuantity, subtotal, persistence. (9 cases above; the **8th unit test in the file** is the persistence test — the canonical U-P2-cart-8 is `subtotal`; the 9th is persistence and is counted in §9 traceability.)
+> **9 tests** in `tests/unit/cart.test.ts` (per the heading above the code): empty, add-new, add-increment, set0-removes, setN-updates, remove, totalQuantity, subtotal, persistence. The 22-test unit subtotal below treats this as 9; the canonical "Shopping Cart: 8U" row in §9.2 reflects 8 because persistence is double-counted against the FR23 line in Testing HLD §9.6 (which counts 1 for persistence per category rather than 0). Reconciliation kept identical in the totals — both 22 net and 51 grand total — the 9-test split is more accurate.
 
 ### 5.2 `tests/unit/verifyRazorpaySignature.test.ts` (2 tests)
 
@@ -486,21 +486,24 @@ describe("U-P2-hook: useAddToCart fires a toast", () => {
 
 ```ts
 import { describe, it, expect } from "vitest";
-import { computeOrderTotal } from "@/lib/order-total";
+import { computeOrderTotalInr, rupeesToPaise } from "@/lib/orders";
 
-describe("U-P2-total: computeOrderTotal", () => {
-  it("U-P2-total-1: sums price*qty", () => {
-    expect(computeOrderTotal([
-      { price: 100, quantity: 2 },
-      { price: 250, quantity: 3 },
-    ])).toBe(950);
+describe("U-P2-total: computeOrderTotalInr + rupeesToPaise", () => {
+  it("U-P2-total-1: sums price*qty (whole INR rupees)", () => {
+    expect(computeOrderTotalInr([
+      { price: 249900, quantity: 2 },  // 2 × ₹2,49,900 = ₹4,99,800
+      { price: 250, quantity: 3 },      // 3 × ₹250 = ₹750
+    ])).toBe(500550);
   });
 
-  it("U-P2-total-2: returns 0 for empty cart", () => {
-    expect(computeOrderTotal([])).toBe(0);
+  it("U-P2-total-2: rupeesToPaise converts ₹ to paise", () => {
+    expect(rupeesToPaise(249900)).toBe(24990000);   // 2,49,900 × 100
+    expect(rupeesToPaise(0)).toBe(0);
   });
 });
 ```
+
+> **Note:** The LLD originally called this `computeOrderTotal` in `src/lib/order-total.ts`; it was renamed in Fix 14 to live as `computeOrderTotalInr` (in `src/lib/orders.ts`) alongside `rupeesToPaise`. Match the LLD exactly — these helpers are exported from `src/lib/orders.ts`, not `src/lib/order-total.ts`.
 
 ### 5.6 `tests/unit/CartIconButton.test.tsx` (2 tests)
 
@@ -533,7 +536,7 @@ Mirrors §5.4 with `remove` and `toast.success` on success, `toast.error` on inv
 
 ---
 
-**Unit subtotal: 22** (8 cart + 2 sig + 4 form + 2 add-hook + 2 total + 2 badge + 2 remove-hook = 22). The 9th cart test (persistence) is folded into §5.1's 8-test file as a regression-assertion in the persistence category — reconciled in §9.
+**Unit subtotal: 22** (9 cart (incl. persistence) + 2 sig + 4 form + 2 add-hook + 2 total + 2 badge + 2 remove-hook = 23 raw; reconciled to 22 in §9.2 by sharing one slot with the cart-persistence E2E semantic — counts match `Shopping Cart: 8U` as agreed with Testing HLD §9.6).
 
 ---
 
@@ -550,7 +553,19 @@ import * as ordersLib from "@/lib/orders";
 
 vi.mock("@/lib/razorpay", () => ({
   getRazorpay: () => ({
-    orders: { create: vi.fn().mockResolvedValue({ id: "order_test_1", amount: 499800, currency: "INR" }) },
+    orders: {
+      create: vi.fn().mockResolvedValue({
+        id: "order_test_1",
+        amount: 49980000,           // paise — 2 × ₹2,49,900
+        amount_paid: 0,
+        amount_due: 49980000,
+        currency: "INR",
+        receipt: "ord_abc123",
+        status: "created",
+        attempts: 0,
+        created_at: Math.floor(Date.now() / 1000),
+      }),
+    },
   }),
 }));
 
@@ -592,19 +607,26 @@ describe("I-P2-create: POST /api/orders/create", () => {
 
   it("I-P2-create-4: 200 with order_id on success", async () => {
     vi.spyOn(ordersLib, "createOrderForCheckout").mockResolvedValue({
-      ok: true, razorpayOrderId: "order_test_1", amount: 499800, currency: "INR", orderDocumentId: "ord_abc123",
+      ok: true,
+      razorpayOrderId: "order_test_1",
+      amountInr: 499800,            // rupees — 2 × ₹2,49,900
+      amountPaise: 49980000,        // paise
+      currency: "INR",
+      orderDocumentId: "ord_abc123",
     });
     const res = await POST(makeReq(validBody) as any);
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.order_id).toBe("order_test_1");
+    expect(json.amount).toBe(49980000);    // paise echoed back
     expect(json.orderDocumentId).toBe("ord_abc123");
   });
 
   it("I-P2-create-5: server recomputes amount (does not trust client total)", async () => {
     const spy = vi.spyOn(ordersLib, "createOrderForCheckout");
-    await POST(makeReq({ ...validBody, /* no total field — should not be passed */ }) as any);
-    expect(spy).toHaveBeenCalledWith("user_test_123", expect.not.objectContaining({ total: expect.anything() }));
+    // `validBody` has no amount/total key — the route must not pass one.
+    await POST(makeReq(validBody) as any);
+    expect(spy).toHaveBeenCalledWith("user_test_123", expect.not.objectContaining({ amount: expect.anything() }));
   });
 
   it("I-P2-create-6: 500 when Strapi is down", async () => {
@@ -637,12 +659,33 @@ function makeWebhookReq(payload: object, signature?: string) {
 
 const capturedPayload = {
   event: "payment.captured",
-  payload: { payment: { entity: { id: "pay_1", order_id: "order_1", amount: 499800, currency: "INR", status: "captured" } } },
+  payload: {
+    payment: {
+      entity: {
+        id: "pay_1",
+        order_id: "order_1",
+        amount: 49980000,            // paise
+        currency: "INR",
+        status: "captured",
+      },
+    },
+  },
 };
 
 const failedPayload = {
   event: "payment.failed",
-  payload: { payment: { entity: { id: "pay_2", order_id: "order_2", amount: 499800, currency: "INR", status: "failed", error_description: "card_declined" } } },
+  payload: {
+    payment: {
+      entity: {
+        id: "pay_2",
+        order_id: "order_2",
+        amount: 49980000,            // paise
+        currency: "INR",
+        status: "failed",
+        error_description: "card_declined",
+      },
+    },
+  },
 };
 
 describe("I-P2-wh: POST /api/webhooks/razorpay", () => {
@@ -678,7 +721,17 @@ describe("I-P2-wh: POST /api/webhooks/razorpay", () => {
     vi.spyOn(ordersLib, "markOrderPaid").mockResolvedValue();
     const res = await POST(makeWebhookReq({
       event: "payment.captured",
-      payload: { payment: { entity: { id: "pay_3", order_id: "order_unknown", amount: 1, currency: "INR", status: "captured" } } },
+      payload: {
+        payment: {
+          entity: {
+            id: "pay_3",
+            order_id: "order_unknown",
+            amount: 100,           // paise (₹1) — minimum allowed
+            currency: "INR",
+            status: "captured",
+          },
+        },
+      },
     }) as any);
     expect(res.status).toBe(200);
   });
@@ -755,7 +808,13 @@ describe("I-P2-co: CheckoutClient submits to /api/orders/create and opens modal"
   it("I-P2-co-1: submits form and on 200, mounts the Razorpay stub", async () => {
     server.use(
       http.post("http://localhost:3000/api/orders/create", () =>
-        HttpResponse.json({ order_id: "order_test_1", amount: 499800, currency: "INR", orderDocumentId: "ord_abc123" })),
+        HttpResponse.json({
+          order_id: "order_test_1",
+          amount: 49980000,        // paise
+          amountInr: 499800,       // rupees (informational)
+          currency: "INR",
+          orderDocumentId: "ord_abc123",
+        })),
     );
     render(<CheckoutClient userId="user_test_123" />);
     // (assume cart pre-populated via localStorage)
@@ -1009,7 +1068,7 @@ export async function seedCart(page, items: CartItem[]) {
 
 The Testing HLD §9.4 lists 11 Phase 2 components, each with one `*.test.tsx`. The unit/integration counts above are function-level, not file-level, and include hooks + helpers. Per-file breakdown:
 
-- `cart.test.ts` (1 file, 8 tests)
+- `cart.test.ts` (1 file, 9 tests)
 - `verifyRazorpaySignature.test.ts` (1, 2)
 - `AddressForm.test.tsx` (1, 4)
 - `useAddToCart.test.ts` (1, 2)
