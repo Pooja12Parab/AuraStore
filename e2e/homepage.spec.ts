@@ -1,4 +1,4 @@
-import { test, expect } from './playwright.setup'
+import { test, expect } from './fixtures/auth'
 
 test('home page renders hero CTA that navigates to /products', async ({ page }) => {
   await page.goto('/')

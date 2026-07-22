@@ -1,4 +1,4 @@
-import { test, expect } from './playwright.setup'
+import { test, expect } from './fixtures/auth'
 
 const hasStrapi = !!process.env.NEXT_PUBLIC_STRAPI_API_URL && !!process.env.STRAPI_API_TOKEN
 
@@ -24,7 +24,7 @@ test('category page shows products filtered to the slug', async ({ page }) => {
   await expect(page.getByRole('link', { name: /wireless headphones/i })).toHaveCount(0)
 })
 
-test('unknown category slug triggers not-found', async ({ page }) => {
-  const response = await page.goto('/category/unknown-category', { waitUntil: 'load' })
+test('unknown category slug returns HTTP 404', async ({ page }) => {
+  const response = await page.goto('/category/unknown-category', { waitUntil: 'domcontentloaded' })
   expect(response?.status()).toBe(404)
 })

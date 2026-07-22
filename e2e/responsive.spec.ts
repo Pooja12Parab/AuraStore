@@ -1,4 +1,4 @@
-import { test, expect } from './playwright.setup'
+import { test, expect } from './fixtures/auth'
 
 test('mobile viewport shows hamburger and hides desktop nav', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 })

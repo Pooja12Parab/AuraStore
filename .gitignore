@@ -56,6 +56,9 @@ test-results/*
 /-*
 # - local scratch dir convention
 /tmp/
+# - hidden tmp dir + stray CLI logs (Kilo session artifacts)
+/.tmp/
+/tmp-*.log
 # - agent scratch (Kilo)
 /.kilo/
 

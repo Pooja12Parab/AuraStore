@@ -1,0 +1,1322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AuraStore — UI/UX Wireframes (Phase 1 improved)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..900&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  /* ------------------------------------------------------------------
+     AuraStore design tokens — mirrored from src/app/globals.css
+     ------------------------------------------------------------------ */
+  :root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --accent: oklch(0.96 0.005 80);
+    --accent-foreground: oklch(0.205 0 0);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --success: oklch(0.62 0.16 145);
+    --warning: oklch(0.78 0.16 75);
+    --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+    --font-mono: 'Geist Mono', ui-monospace, monospace;
+    --radius: 0.625rem;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+    --shadow-md: 0 4px 8px -2px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+    --shadow-lg: 0 12px 24px -6px rgb(0 0 0 / 0.10), 0 4px 8px -4px rgb(0 0 0 / 0.04);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-sans);
+    color: var(--foreground);
+    background: var(--background);
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.5;
+  }
+  h1, h2, h3, h4 { letter-spacing: -0.02em; margin: 0; line-height: 1.15; text-wrap: balance; }
+  p { margin: 0; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+  img { max-width: 100%; display: block; }
+
+  .container { max-width: 80rem; margin: 0 auto; padding: 0 1rem; }
+  @media (min-width: 640px) { .container { padding: 0 1.5rem; } }
+
+  /* ------------------------------------------------------------------
+     Sticky header
+     ------------------------------------------------------------------ */
+  .header {
+    position: sticky; top: 0; z-index: 50;
+    background: color-mix(in oklch, var(--background) 80%, transparent);
+    backdrop-filter: saturate(180%) blur(12px);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid var(--border);
+    transition: box-shadow 200ms ease;
+  }
+  .header.scrolled { box-shadow: var(--shadow-sm); }
+  .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding: 0.875rem 0; }
+  .brand { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 1.125rem; letter-spacing: -0.02em; }
+  .brand-mark {
+    width: 1.75rem; height: 1.75rem; border-radius: 0.5rem;
+    background: var(--foreground); color: var(--primary-foreground);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.875rem;
+  }
+  .nav { display: none; gap: 1.75rem; }
+  .nav a { font-size: 0.875rem; color: var(--muted-foreground); transition: color 150ms; position: relative; padding: 0.25rem 0; }
+  .nav a:hover, .nav a.active { color: var(--foreground); }
+  .nav a.active::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: -1.375rem;
+    height: 2px; background: var(--foreground); border-radius: 2px;
+  }
+  @media (min-width: 768px) { .nav { display: flex; } }
+  .header-actions { display: flex; align-items: center; gap: 0.5rem; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    height: 2.25rem; padding: 0 0.875rem; border-radius: var(--radius);
+    font-size: 0.875rem; font-weight: 500; line-height: 1;
+    transition: background-color 150ms, color 150ms, border-color 150ms, transform 80ms;
+    border: 1px solid transparent; white-space: nowrap;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--foreground); color: var(--primary-foreground); }
+  .btn-primary:hover { background: oklch(0.30 0 0); }
+  .btn-outline { background: transparent; color: var(--foreground); border-color: var(--border); }
+  .btn-outline:hover { background: var(--muted); }
+  .btn-ghost { background: transparent; color: var(--foreground); }
+  .btn-ghost:hover { background: var(--muted); }
+  .btn-lg { height: 2.75rem; padding: 0 1.25rem; font-size: 0.9375rem; }
+  .btn-sm { height: 2rem; padding: 0 0.75rem; font-size: 0.8125rem; }
+  .btn-icon { width: 2.25rem; padding: 0; }
+
+  .menu-toggle { display: inline-flex; }
+  @media (min-width: 768px) { .menu-toggle { display: none; } }
+  .mobile-panel {
+    display: none; padding: 0.75rem 0 1rem; border-top: 1px solid var(--border);
+    flex-direction: column; gap: 0.25rem;
+  }
+  .mobile-panel.open { display: flex; }
+  .mobile-panel a { padding: 0.625rem 0.5rem; border-radius: 0.375rem; font-size: 0.9375rem; color: var(--muted-foreground); }
+  .mobile-panel a:hover, .mobile-panel a.active { background: var(--muted); color: var(--foreground); }
+
+  /* ------------------------------------------------------------------
+     Hero
+     ------------------------------------------------------------------ */
+  .hero { padding: 4rem 0 3rem; }
+  .hero-grid { display: grid; gap: 3rem; align-items: center; }
+  @media (min-width: 1024px) { .hero-grid { grid-template-columns: 1.05fr 1fr; gap: 4rem; } .hero { padding: 6rem 0 5rem; } }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.375rem 0.75rem; border-radius: 999px;
+    background: var(--muted); color: var(--muted-foreground);
+    font-size: 0.8125rem; font-weight: 500;
+  }
+  .hero-eyebrow .dot { width: 0.375rem; height: 0.375rem; border-radius: 999px; background: var(--success); }
+  .hero h1 {
+    font-size: clamp(2.25rem, 5vw, 4rem);
+    font-weight: 700; line-height: 1.05;
+    margin-top: 1.25rem;
+  }
+  .hero h1 .accent { font-style: italic; font-weight: 500; color: var(--muted-foreground); }
+  .hero-lede { font-size: 1.0625rem; color: var(--muted-foreground); max-width: 36rem; margin-top: 1.25rem; line-height: 1.6; }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2rem; }
+  .hero-meta { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+  .hero-meta-item { display: flex; flex-direction: column; }
+  .hero-meta-item .value { font-size: 1.25rem; font-weight: 600; }
+  .hero-meta-item .label { font-size: 0.8125rem; color: var(--muted-foreground); }
+
+  .hero-visual {
+    position: relative; aspect-ratio: 5 / 4; border-radius: 1rem; overflow: hidden;
+    background: var(--muted);
+  }
+  .hero-visual .tile {
+    position: absolute; border-radius: 0.75rem; overflow: hidden;
+    box-shadow: var(--shadow-md); background: #ddd;
+  }
+  .hero-visual .tile img { width: 100%; height: 100%; object-fit: cover; }
+  .hero-visual .t1 { top: 0; left: 0; width: 60%; height: 70%; }
+  .hero-visual .t2 { top: 12%; right: 0; width: 38%; height: 50%; }
+  .hero-visual .t3 { bottom: 0; right: 8%; width: 50%; height: 45%; }
+  .hero-visual .badge-float {
+    position: absolute; top: 1rem; left: 1rem;
+    background: var(--background); padding: 0.5rem 0.75rem; border-radius: 0.625rem;
+    box-shadow: var(--shadow-lg); display: inline-flex; align-items: center; gap: 0.5rem;
+    font-size: 0.8125rem; font-weight: 500;
+  }
+
+  /* Trust strip */
+  .trust {
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    background: var(--muted);
+  }
+  .trust-grid {
+    display: grid; gap: 1rem; padding: 1.5rem 0;
+    grid-template-columns: repeat(2, 1fr);
+  }
+  @media (min-width: 768px) { .trust-grid { grid-template-columns: repeat(4, 1fr); gap: 2rem; } }
+  .trust-item { display: flex; align-items: center; gap: 0.75rem; }
+  .trust-item .icon-box {
+    width: 2.25rem; height: 2.25rem; border-radius: 0.5rem;
+    background: var(--background); color: var(--foreground);
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border);
+  }
+  .trust-item .label { font-size: 0.875rem; font-weight: 500; }
+  .trust-item .sub { font-size: 0.75rem; color: var(--muted-foreground); }
+
+  /* Section header */
+  .section { padding: 4rem 0; }
+  .section-head { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+  .section-head h2 { font-size: clamp(1.5rem, 3vw, 2.25rem); font-weight: 700; }
+  .section-head .sub { color: var(--muted-foreground); font-size: 0.9375rem; margin-top: 0.5rem; }
+  .section-head .right { display: flex; align-items: center; gap: 0.5rem; }
+
+  /* ------------------------------------------------------------------
+     Page header (listing / category)
+     ------------------------------------------------------------------ */
+  .page-head { padding: 2.5rem 0 1.5rem; border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
+  .breadcrumb { display: flex; flex-wrap: wrap; gap: 0.375rem; align-items: center; font-size: 0.8125rem; color: var(--muted-foreground); margin-bottom: 0.75rem; }
+  .breadcrumb a:hover { color: var(--foreground); }
+  .breadcrumb .sep { opacity: 0.5; }
+  .page-head h1 { font-size: clamp(1.75rem, 3.5vw, 2.5rem); font-weight: 700; }
+  .page-head .lede { color: var(--muted-foreground); margin-top: 0.5rem; max-width: 42rem; }
+  .page-head .meta-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-top: 1rem; justify-content: space-between; }
+  .count { font-size: 0.875rem; color: var(--muted-foreground); }
+  .count strong { color: var(--foreground); font-weight: 600; }
+  .sort { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border); font-size: 0.875rem; background: var(--background); }
+
+  /* ------------------------------------------------------------------
+     Category filter (chip-style)
+     ------------------------------------------------------------------ */
+  .filter-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; padding-bottom: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+  .chip {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.5rem 0.875rem; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--background); color: var(--muted-foreground);
+    font-size: 0.875rem; font-weight: 500;
+    transition: background-color 150ms, color 150ms, border-color 150ms;
+  }
+  .chip:hover { background: var(--muted); color: var(--foreground); }
+  .chip.active { background: var(--foreground); color: var(--primary-foreground); border-color: var(--foreground); }
+  .chip .count-pill {
+    display: inline-flex; min-width: 1.25rem; height: 1.25rem; padding: 0 0.375rem;
+    align-items: center; justify-content: center; border-radius: 999px;
+    background: var(--muted); color: var(--muted-foreground); font-size: 0.6875rem; font-weight: 600;
+  }
+  .chip.active .count-pill { background: oklch(1 0 0 / 0.18); color: var(--primary-foreground); }
+
+  /* ------------------------------------------------------------------
+     Product grid + card
+     ------------------------------------------------------------------ */
+  .grid {
+    display: grid; gap: 1.25rem 1rem;
+    grid-template-columns: repeat(1, 1fr);
+  }
+  @media (min-width: 640px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1024px) { .grid { grid-template-columns: repeat(3, 1fr); gap: 1.75rem 1.25rem; } }
+  @media (min-width: 1280px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+
+  .card {
+    position: relative; display: block; border-radius: 0.75rem; overflow: hidden;
+    transition: transform 200ms ease, box-shadow 200ms ease;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .card-media {
+    position: relative; aspect-ratio: 1 / 1; border-radius: 0.75rem; overflow: hidden;
+    background: var(--muted);
+  }
+  .card-media img { width: 100%; height: 100%; object-fit: cover; transition: transform 500ms ease; }
+  .card:hover .card-media img { transform: scale(1.04); }
+  .card-media .sale-badge {
+    position: absolute; top: 0.625rem; left: 0.625rem;
+    background: var(--foreground); color: var(--primary-foreground);
+    padding: 0.25rem 0.5rem; border-radius: 0.375rem;
+    font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.02em;
+  }
+  .card-media .featured-badge {
+    position: absolute; top: 0.625rem; right: 0.625rem;
+    background: var(--warning); color: oklch(0.20 0 0);
+    padding: 0.25rem 0.5rem; border-radius: 0.375rem;
+    font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.02em;
+  }
+  .card-media .quick {
+    position: absolute; left: 0.75rem; right: 0.75rem; bottom: 0.75rem;
+    padding: 0.625rem 0.75rem; border-radius: 0.5rem;
+    background: color-mix(in oklch, var(--background) 92%, transparent);
+    backdrop-filter: blur(6px);
+    font-size: 0.8125rem; font-weight: 500;
+    display: inline-flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    opacity: 0; transform: translateY(0.5rem); transition: opacity 200ms, transform 200ms;
+  }
+  .card:hover .card-media .quick { opacity: 1; transform: translateY(0); }
+  .card-body { padding: 0.875rem 0.25rem 0.25rem; }
+  .card-cat {
+    display: inline-block; padding: 0.125rem 0.5rem; border-radius: 999px;
+    background: var(--muted); color: var(--muted-foreground);
+    font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .card-name { font-size: 0.9375rem; font-weight: 500; margin-top: 0.5rem; line-height: 1.3; }
+  .card-price { display: inline-flex; align-items: baseline; gap: 0.5rem; margin-top: 0.375rem; }
+  .card-price .now { font-size: 0.9375rem; font-weight: 600; }
+  .card-price .was { font-size: 0.8125rem; color: var(--muted-foreground); text-decoration: line-through; }
+  .card-price .save { font-size: 0.6875rem; font-weight: 600; color: var(--success); margin-left: 0.25rem; }
+
+  /* Skeleton */
+  .skeleton {
+    background: linear-gradient(90deg, var(--muted) 0%, color-mix(in oklch, var(--muted) 70%, var(--background) 30%) 50%, var(--muted) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 0.375rem;
+  }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  .sk-card-media { aspect-ratio: 1/1; border-radius: 0.75rem; }
+  .sk-line { height: 0.75rem; margin-top: 0.5rem; }
+  .sk-line.short { width: 30%; }
+  .sk-line.mid { width: 65%; }
+  .sk-line.long { width: 90%; }
+  .sk-line.tall { height: 1rem; }
+
+  /* ------------------------------------------------------------------
+     Empty / Error / 404
+     ------------------------------------------------------------------ */
+  .state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 4rem 1rem; text-align: center;
+  }
+  .state-icon {
+    width: 4.5rem; height: 4.5rem; border-radius: 1rem;
+    background: var(--muted); color: var(--muted-foreground);
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+  .state h3 { font-size: 1.25rem; font-weight: 600; }
+  .state p { color: var(--muted-foreground); margin-top: 0.5rem; max-width: 28rem; }
+  .state .actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; flex-wrap: wrap; justify-content: center; }
+  .state.large { padding: 6rem 1rem; }
+  .state.large h2 { font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; }
+  .state.large .state-icon { width: 6rem; height: 6rem; border-radius: 1.25rem; }
+  .state-illustration {
+    width: 12rem; height: 12rem; border-radius: 1.5rem;
+    background: var(--muted); position: relative; overflow: hidden;
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-bottom: 2rem;
+  }
+
+  /* ------------------------------------------------------------------
+     Product detail
+     ------------------------------------------------------------------ */
+  .detail-grid { display: grid; gap: 3rem; }
+  @media (min-width: 1024px) { .detail-grid { grid-template-columns: 1.1fr 1fr; gap: 4rem; align-items: start; } }
+
+  .gallery { display: grid; gap: 0.75rem; grid-template-columns: 1fr; }
+  @media (min-width: 1024px) { .gallery { grid-template-columns: 5fr 1fr; } }
+  .gallery-main {
+    aspect-ratio: 1/1; border-radius: 0.875rem; overflow: hidden; background: var(--muted);
+    box-shadow: var(--shadow-sm);
+  }
+  .gallery-main img { width: 100%; height: 100%; object-fit: cover; }
+  .gallery-thumbs { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  @media (min-width: 1024px) { .gallery-thumbs { flex-direction: column; } }
+  .thumb {
+    width: 4.5rem; aspect-ratio: 1/1; border-radius: 0.5rem; overflow: hidden;
+    background: var(--muted); border: 2px solid transparent; padding: 0;
+    transition: border-color 150ms, transform 150ms; cursor: pointer;
+  }
+  .thumb:hover { transform: translateY(-1px); }
+  .thumb.active { border-color: var(--foreground); }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+  .info-stack { display: flex; flex-direction: column; gap: 1.25rem; }
+  .info-cat {
+    display: inline-flex; align-items: center; gap: 0.375rem;
+    align-self: flex-start; padding: 0.375rem 0.75rem; border-radius: 999px;
+    background: var(--muted); color: var(--muted-foreground);
+    font-size: 0.8125rem; font-weight: 500;
+  }
+  .info-cat:hover { background: var(--accent); color: var(--accent-foreground); }
+  .info-title { font-size: clamp(1.75rem, 3.5vw, 2.25rem); font-weight: 700; line-height: 1.15; }
+  .info-rating { display: inline-flex; align-items: center; gap: 0.375rem; font-size: 0.875rem; color: var(--muted-foreground); }
+  .info-rating .stars { color: var(--warning); display: inline-flex; gap: 0.0625rem; }
+  .info-price-row { display: flex; align-items: baseline; gap: 0.75rem; flex-wrap: wrap; }
+  .info-price { font-size: 1.875rem; font-weight: 700; }
+  .info-price-was { font-size: 1.125rem; color: var(--muted-foreground); text-decoration: line-through; }
+  .info-save-pill {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    background: color-mix(in oklch, var(--success) 12%, transparent);
+    color: var(--success);
+    padding: 0.25rem 0.625rem; border-radius: 999px;
+    font-size: 0.75rem; font-weight: 600;
+  }
+  .info-stock { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; }
+  .info-stock .dot { width: 0.5rem; height: 0.5rem; border-radius: 999px; background: var(--success); box-shadow: 0 0 0 3px color-mix(in oklch, var(--success) 20%, transparent); }
+  .info-stock.low .dot { background: var(--warning); box-shadow: 0 0 0 3px color-mix(in oklch, var(--warning) 20%, transparent); }
+  .info-stock.out .dot { background: var(--destructive); box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 20%, transparent); }
+  .info-desc { color: var(--muted-foreground); line-height: 1.65; max-width: 38rem; }
+
+  .info-cta { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem; }
+  .btn-block { width: 100%; }
+  .btn-disabled { opacity: 0.65; cursor: not-allowed; }
+  .coming-soon-hint { font-size: 0.75rem; color: var(--muted-foreground); margin-top: 0.25rem; }
+
+  .info-meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; padding-top: 1.25rem; border-top: 1px solid var(--border); margin-top: 0.5rem; }
+  .info-meta { display: flex; align-items: center; gap: 0.625rem; font-size: 0.8125rem; color: var(--muted-foreground); }
+  .info-meta .icon-box { width: 2rem; height: 2rem; border-radius: 0.5rem; background: var(--muted); display: inline-flex; align-items: center; justify-content: center; color: var(--foreground); }
+
+  .feature-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .feature-pill {
+    display: inline-flex; align-items: center; gap: 0.375rem;
+    padding: 0.375rem 0.75rem; border-radius: 999px;
+    background: var(--muted); color: var(--foreground);
+    font-size: 0.8125rem;
+  }
+
+  /* ------------------------------------------------------------------
+     Auth pages
+     ------------------------------------------------------------------ */
+  .auth-wrap { min-height: calc(100vh - 8rem); display: flex; align-items: center; justify-content: center; padding: 3rem 1rem; }
+  .auth-card {
+    width: 100%; max-width: 26rem; background: var(--background);
+    border: 1px solid var(--border); border-radius: 1rem; padding: 2rem;
+    box-shadow: var(--shadow);
+  }
+  .auth-head { text-align: center; margin-bottom: 1.75rem; }
+  .auth-head h1 { font-size: 1.5rem; font-weight: 700; }
+  .auth-head p { color: var(--muted-foreground); font-size: 0.9375rem; margin-top: 0.375rem; }
+  .field { display: flex; flex-direction: column; gap: 0.375rem; margin-bottom: 1rem; }
+  .field label { font-size: 0.8125rem; font-weight: 500; color: var(--muted-foreground); }
+  .field input {
+    height: 2.5rem; padding: 0 0.875rem; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--background);
+    font: inherit; color: inherit; transition: border-color 150ms, box-shadow 150ms;
+  }
+  .field input:focus { outline: none; border-color: var(--foreground); box-shadow: 0 0 0 3px color-mix(in oklch, var(--foreground) 12%, transparent); }
+  .auth-divider { display: flex; align-items: center; gap: 0.75rem; margin: 1.25rem 0; color: var(--muted-foreground); font-size: 0.8125rem; }
+  .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .oauth-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .auth-foot { text-align: center; font-size: 0.875rem; color: var(--muted-foreground); margin-top: 1.25rem; }
+  .auth-foot a { font-weight: 500; color: var(--foreground); text-decoration: underline; text-underline-offset: 3px; }
+
+  /* ------------------------------------------------------------------
+     Footer (multi-column)
+     ------------------------------------------------------------------ */
+  .footer { background: var(--foreground); color: oklch(0.95 0 0); padding: 4rem 0 2rem; margin-top: 4rem; }
+  .footer .brand { color: oklch(0.95 0 0); }
+  .footer .brand-mark { background: oklch(0.95 0 0); color: var(--foreground); }
+  .footer-grid { display: grid; gap: 2.5rem; grid-template-columns: 1fr; }
+  @media (min-width: 768px) { .footer-grid { grid-template-columns: 1.4fr repeat(3, 1fr); } }
+  .footer h4 { font-size: 0.8125rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: oklch(0.75 0 0); margin-bottom: 1rem; }
+  .footer ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.625rem; }
+  .footer a { color: oklch(0.85 0 0); font-size: 0.875rem; transition: color 150ms; }
+  .footer a:hover { color: oklch(1 0 0); }
+  .footer-blurb { color: oklch(0.75 0 0); font-size: 0.9375rem; line-height: 1.6; margin-top: 1rem; max-width: 24rem; }
+  .newsletter { display: flex; gap: 0.5rem; margin-top: 1.25rem; max-width: 24rem; }
+  .newsletter input {
+    flex: 1; height: 2.5rem; padding: 0 0.875rem; border-radius: var(--radius);
+    background: oklch(1 0 0 / 0.08); border: 1px solid oklch(1 0 0 / 0.15);
+    color: oklch(0.95 0 0); font: inherit;
+  }
+  .newsletter input::placeholder { color: oklch(0.65 0 0); }
+  .newsletter button {
+    height: 2.5rem; padding: 0 1rem; border-radius: var(--radius);
+    background: oklch(0.95 0 0); color: var(--foreground); border: none; font-weight: 500;
+  }
+  .footer-bottom {
+    border-top: 1px solid oklch(1 0 0 / 0.10); margin-top: 3rem; padding-top: 1.5rem;
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;
+    font-size: 0.8125rem; color: oklch(0.65 0 0);
+  }
+  .footer-bottom .policies { display: flex; gap: 1.25rem; }
+
+  /* ------------------------------------------------------------------
+     Page visibility (hash router)
+     ------------------------------------------------------------------ */
+  .page { display: none; }
+  .page.active { display: block; }
+  main { min-height: calc(100vh - 4rem); }
+
+  /* ------------------------------------------------------------------
+     Misc
+     ------------------------------------------------------------------ */
+  .swatch-row { display: flex; gap: 0.5rem; }
+  .swatch {
+    width: 2rem; height: 2rem; border-radius: 999px; border: 2px solid var(--border);
+    cursor: pointer; transition: transform 150ms, border-color 150ms;
+  }
+  .swatch.active { border-color: var(--foreground); transform: scale(1.05); }
+
+  /* Annotation badge (wireframe-only) */
+  .annot {
+    position: relative;
+  }
+  .annot::after {
+    content: attr(data-note);
+    position: absolute; bottom: calc(100% + 0.25rem); left: 0;
+    background: var(--foreground); color: var(--primary-foreground);
+    font-size: 0.6875rem; padding: 0.125rem 0.5rem; border-radius: 0.25rem;
+    opacity: 0; transition: opacity 200ms; pointer-events: none; white-space: nowrap;
+    z-index: 10;
+  }
+  .annot:hover::after { opacity: 1; }
+
+  .banner {
+    background: var(--foreground); color: var(--primary-foreground);
+    text-align: center; padding: 0.5rem 1rem; font-size: 0.8125rem;
+  }
+  .banner strong { font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- Announcement banner (wireframe-only, helps convey ecommerce context) -->
+<div class="banner">
+  Free shipping on orders over ₹999 · Easy 30-day returns ·
+  <strong>This is a wireframe</strong> — open <code>docs/workspace/wireframes/index.html</code> and click around
+</div>
+
+<!-- ================================================================
+     HEADER (sticky, backdrop blur)
+     ================================================================ -->
+<header class="header" id="header">
+  <div class="container">
+    <div class="header-inner">
+      <a href="#home" class="brand">
+        <span class="brand-mark">A</span>
+        AuraStore
+      </a>
+
+      <nav class="nav" aria-label="Primary">
+        <a href="#home" data-nav="home">Home</a>
+        <a href="#products" data-nav="products">Shop</a>
+        <a href="#category/electronics" data-nav="electronics">Electronics</a>
+        <a href="#category/clothing" data-nav="clothing">Clothing</a>
+        <a href="#about" data-nav="about">About</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="btn btn-icon btn-ghost annot" data-note="Wishlist — Phase 2 (out of scope)" aria-label="Wishlist">
+          <i data-lucide="heart" style="width:18px;height:18px"></i>
+        </button>
+        <button class="btn btn-icon btn-ghost annot" data-note="Cart — Phase 2 (out of scope)" aria-label="Cart">
+          <i data-lucide="shopping-bag" style="width:18px;height:18px"></i>
+        </button>
+        <button class="btn btn-outline btn-sm" data-route="#signin">Sign in</button>
+        <button class="btn btn-primary btn-sm" data-route="#signup">Sign up</button>
+        <button class="btn btn-icon btn-ghost menu-toggle" id="menuToggle" aria-label="Toggle navigation" aria-expanded="false">
+          <i data-lucide="menu" style="width:20px;height:20px" id="menuIcon"></i>
+        </button>
+      </div>
+    </div>
+    <div class="mobile-panel" id="mobilePanel">
+      <a href="#home" data-nav="home">Home</a>
+      <a href="#products" data-nav="products">Shop</a>
+      <a href="#category/electronics" data-nav="electronics">Electronics</a>
+      <a href="#category/clothing" data-nav="clothing">Clothing</a>
+      <a href="#about" data-nav="about">About</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============================================================
+       PAGE: HOME
+       ============================================================ -->
+  <section class="page" id="page-home">
+    <div class="container">
+      <!-- HERO: split layout, eyebrow + headline + dual CTA + meta + visual collage -->
+      <div class="hero">
+        <div class="hero-grid">
+          <div>
+            <span class="hero-eyebrow">
+              <span class="dot"></span> New collection · Autumn 2026
+            </span>
+            <h1>
+              Shop <span class="accent">curated</span><br />
+              essentials, made simple.
+            </h1>
+            <p class="hero-lede">
+              Hand-picked electronics, apparel, and home goods from independent makers.
+              Honest pricing, fast shipping, no clutter.
+            </p>
+            <div class="hero-actions">
+              <a href="#products" class="btn btn-primary btn-lg">
+                Browse products <i data-lucide="arrow-right" style="width:16px;height:16px"></i>
+              </a>
+              <a href="#about" class="btn btn-outline btn-lg">Our story</a>
+            </div>
+            <div class="hero-meta">
+              <div class="hero-meta-item">
+                <span class="value">10k+</span>
+                <span class="label">Happy customers</span>
+              </div>
+              <div class="hero-meta-item">
+                <span class="value">4.8★</span>
+                <span class="label">Average rating</span>
+              </div>
+              <div class="hero-meta-item">
+                <span class="value">48h</span>
+                <span class="label">Express delivery</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hero image collage (3 tiles) -->
+          <div class="hero-visual">
+            <div class="tile t1"><img src="https://picsum.photos/seed/headphones/800/800" alt="" /></div>
+            <div class="tile t2"><img src="https://picsum.photos/seed/watch/600/600" alt="" /></div>
+            <div class="tile t3"><img src="https://picsum.photos/seed/sneaker/600/600" alt="" /></div>
+            <div class="badge-float">
+              <i data-lucide="truck" style="width:14px;height:14px"></i>
+              Free shipping over ₹999
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trust strip -->
+    <div class="trust">
+      <div class="container">
+        <div class="trust-grid">
+          <div class="trust-item">
+            <div class="icon-box"><i data-lucide="truck" style="width:16px;height:16px"></i></div>
+            <div>
+              <div class="label">Free shipping</div>
+              <div class="sub">On orders over ₹999</div>
+            </div>
+          </div>
+          <div class="trust-item">
+            <div class="icon-box"><i data-lucide="refresh-ccw" style="width:16px;height:16px"></i></div>
+            <div>
+              <div class="label">Easy returns</div>
+              <div class="sub">30-day window</div>
+            </div>
+          </div>
+          <div class="trust-item">
+            <div class="icon-box"><i data-lucide="shield-check" style="width:16px;height:16px"></i></div>
+            <div>
+              <div class="label">Secure checkout</div>
+              <div class="sub">256-bit encryption</div>
+            </div>
+          </div>
+          <div class="trust-item">
+            <div class="icon-box"><i data-lucide="headphones" style="width:16px;height:16px"></i></div>
+            <div>
+              <div class="label">24/7 support</div>
+              <div class="sub">Real humans</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Featured section -->
+    <div class="container">
+      <div class="section">
+        <div class="section-head">
+          <div>
+            <h2>Featured this week</h2>
+            <p class="sub">Hand-picked by our team. Updated every Monday.</p>
+          </div>
+          <div class="right">
+            <a href="#products" class="btn btn-ghost btn-sm">View all <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+          </div>
+        </div>
+        <div class="grid" id="featuredGrid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       PAGE: PRODUCTS LISTING
+       ============================================================ -->
+  <section class="page" id="page-products">
+    <div class="container">
+      <div class="page-head">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a href="#home">Home</a>
+          <span class="sep">/</span>
+          <span>Products</span>
+        </nav>
+        <h1>All products</h1>
+        <p class="lede">Browse our complete catalog. Filter by category to narrow your search.</p>
+        <div class="meta-row">
+          <div class="count"><strong>12</strong> products</div>
+          <div class="sort annot" data-note="Sort dropdown — Phase 2">
+            <i data-lucide="arrow-up-down" style="width:14px;height:14px"></i>
+            Sort: Featured
+            <i data-lucide="chevron-down" style="width:14px;height:14px"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-bar" role="group" aria-label="Filter by category">
+        <button class="chip active" data-cat="">
+          All <span class="count-pill">12</span>
+        </button>
+        <button class="chip" data-cat="electronics">
+          <i data-lucide="cpu" style="width:14px;height:14px"></i> Electronics <span class="count-pill">5</span>
+        </button>
+        <button class="chip" data-cat="clothing">
+          <i data-lucide="shirt" style="width:14px;height:14px"></i> Clothing <span class="count-pill">4</span>
+        </button>
+        <button class="chip" data-cat="home">
+          <i data-lucide="lamp" style="width:14px;height:14px"></i> Home <span class="count-pill">2</span>
+        </button>
+        <button class="chip" data-cat="books">
+          <i data-lucide="book-open" style="width:14px;height:14px"></i> Books <span class="count-pill">1</span>
+        </button>
+      </div>
+
+      <div class="grid" id="productsGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       PAGE: PRODUCT DETAIL
+       ============================================================ -->
+  <section class="page" id="page-product">
+    <div class="container">
+      <div class="page-head" style="padding-top:1.5rem; margin-bottom:2rem;">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a href="#home">Home</a>
+          <span class="sep">/</span>
+          <a href="#products">Products</a>
+          <span class="sep">/</span>
+          <a href="#category/electronics" id="pdCatLink">Electronics</a>
+          <span class="sep">/</span>
+          <span id="pdCrumbName">Wireless headphones</span>
+        </nav>
+      </div>
+
+      <div class="detail-grid">
+        <!-- Gallery -->
+        <div class="gallery">
+          <div class="gallery-main">
+            <img id="pdMainImg" src="https://picsum.photos/seed/wireless-headphones/900/900" alt="Wireless headphones" />
+          </div>
+          <div class="gallery-thumbs" id="pdThumbs">
+            <button class="thumb active" data-img="https://picsum.photos/seed/wireless-headphones/900/900"><img src="https://picsum.photos/seed/wireless-headphones/200/200" alt="" /></button>
+            <button class="thumb" data-img="https://picsum.photos/seed/headphones-side/900/900"><img src="https://picsum.photos/seed/headphones-side/200/200" alt="" /></button>
+            <button class="thumb" data-img="https://picsum.photos/seed/headphones-case/900/900"><img src="https://picsum.photos/seed/headphones-case/200/200" alt="" /></button>
+            <button class="thumb" data-img="https://picsum.photos/seed/headphones-detail/900/900"><img src="https://picsum.photos/seed/headphones-detail/200/200" alt="" /></button>
+          </div>
+        </div>
+
+        <!-- Info -->
+        <div class="info-stack">
+          <a href="#category/electronics" class="info-cat">
+            <i data-lucide="tag" style="width:12px;height:12px"></i> Electronics
+          </a>
+
+          <div>
+            <h1 class="info-title">Wireless over-ear headphones</h1>
+            <div class="info-rating" style="margin-top:0.5rem;">
+              <span class="stars">
+                <i data-lucide="star" style="width:14px;height:14px;fill:currentColor"></i>
+                <i data-lucide="star" style="width:14px;height:14px;fill:currentColor"></i>
+                <i data-lucide="star" style="width:14px;height:14px;fill:currentColor"></i>
+                <i data-lucide="star" style="width:14px;height:14px;fill:currentColor"></i>
+                <i data-lucide="star-half" style="width:14px;height:14px;fill:currentColor"></i>
+              </span>
+              <span>4.6 · 218 reviews</span>
+            </div>
+          </div>
+
+          <div class="info-price-row">
+            <span class="info-price">₹2,499</span>
+            <span class="info-price-was">₹3,999</span>
+            <span class="info-save-pill"><i data-lucide="arrow-down" style="width:12px;height:12px"></i> Save 38%</span>
+          </div>
+
+          <div class="info-stock">
+            <span class="dot"></span>
+            In stock · Ships in 24 hours
+          </div>
+
+          <p class="info-desc">
+            Active noise cancellation, 40-hour battery, and USB-C fast charge.
+            Premium memory-foam earcups for all-day comfort. Multi-point Bluetooth
+            pairs with two devices at once.
+          </p>
+
+          <div class="feature-pills">
+            <span class="feature-pill"><i data-lucide="bluetooth" style="width:12px;height:12px"></i> Bluetooth 5.3</span>
+            <span class="feature-pill"><i data-lucide="battery-full" style="width:12px;height:12px"></i> 40h battery</span>
+            <span class="feature-pill"><i data-lucide="mic" style="width:12px;height:12px"></i> Built-in mic</span>
+            <span class="feature-pill"><i data-lucide="sparkles" style="width:12px;height:12px"></i> ANC</span>
+          </div>
+
+          <div>
+            <div style="font-size:0.8125rem;font-weight:500;margin-bottom:0.5rem;">Color</div>
+            <div class="swatch-row">
+              <button class="swatch active" style="background:#1a1a1a" aria-label="Black"></button>
+              <button class="swatch" style="background:#e5e5e5" aria-label="Stone"></button>
+              <button class="swatch" style="background:#2a4a6b" aria-label="Navy"></button>
+            </div>
+          </div>
+
+          <div class="info-cta">
+            <button class="btn btn-primary btn-lg btn-block btn-disabled annot" data-note="Add to cart — Phase 2 (out of scope)" style="flex:1;">
+              <i data-lucide="shopping-bag" style="width:16px;height:16px"></i>
+              Add to cart
+            </button>
+            <button class="btn btn-outline btn-icon btn-lg annot" data-note="Wishlist — Phase 2" aria-label="Save">
+              <i data-lucide="heart" style="width:18px;height:18px"></i>
+            </button>
+            <button class="btn btn-outline btn-icon btn-lg" aria-label="Share">
+              <i data-lucide="share-2" style="width:18px;height:18px"></i>
+            </button>
+          </div>
+          <div class="coming-soon-hint">Checkout launches in Phase 2 — sign up to be notified.</div>
+
+          <div class="info-meta-grid">
+            <div class="info-meta">
+              <div class="icon-box"><i data-lucide="truck" style="width:14px;height:14px"></i></div>
+              <div>
+                <div style="color:var(--foreground);font-weight:500;">Free delivery</div>
+                <div>2–4 business days</div>
+              </div>
+            </div>
+            <div class="info-meta">
+              <div class="icon-box"><i data-lucide="refresh-ccw" style="width:14px;height:14px"></i></div>
+              <div>
+                <div style="color:var(--foreground);font-weight:500;">30-day returns</div>
+                <div>No questions asked</div>
+              </div>
+            </div>
+            <div class="info-meta">
+              <div class="icon-box"><i data-lucide="shield-check" style="width:14px;height:14px"></i></div>
+              <div>
+                <div style="color:var(--foreground);font-weight:500;">2-year warranty</div>
+                <div>Manufacturer backed</div>
+              </div>
+            </div>
+            <div class="info-meta">
+              <div class="icon-box"><i data-lucide="package" style="width:14px;height:14px"></i></div>
+              <div>
+                <div style="color:var(--foreground);font-weight:500;">In stock</div>
+                <div>47 units available</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Related -->
+      <div class="section" style="padding-bottom:0;">
+        <div class="section-head">
+          <div>
+            <h2>You might also like</h2>
+            <p class="sub">More from Electronics</p>
+          </div>
+          <a href="#category/electronics" class="btn btn-ghost btn-sm">View all <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+        </div>
+        <div class="grid" id="relatedGrid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       PAGE: CATEGORY
+       ============================================================ -->
+  <section class="page" id="page-category">
+    <div class="container">
+      <div class="page-head">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a href="#home">Home</a>
+          <span class="sep">/</span>
+          <a href="#products">Products</a>
+          <span class="sep">/</span>
+          <span id="catCrumbName">Electronics</span>
+        </nav>
+        <h1 id="catTitle">Electronics</h1>
+        <p class="lede" id="catDesc">Audio gear, smart devices, and accessories built for everyday use.</p>
+        <div class="meta-row">
+          <div class="count"><strong>5</strong> products</div>
+          <div class="sort annot" data-note="Sort — Phase 2">
+            <i data-lucide="arrow-up-down" style="width:14px;height:14px"></i> Sort: Featured
+            <i data-lucide="chevron-down" style="width:14px;height:14px"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-bar" id="catFilterBar"></div>
+
+      <div class="grid" id="catGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       PAGE: SIGN IN
+       ============================================================ -->
+  <section class="page" id="page-signin">
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <div class="auth-head">
+          <div class="brand-mark" style="margin:0 auto 0.75rem;">A</div>
+          <h1>Welcome back</h1>
+          <p>Sign in to your AuraStore account</p>
+        </div>
+
+        <form onsubmit="event.preventDefault(); alert('Wireframe — sign-in handler would go here');">
+          <div class="field">
+            <label for="email">Email address</label>
+            <input id="email" type="email" placeholder="you@example.com" autocomplete="email" />
+          </div>
+          <div class="field">
+            <label for="pwd">Password</label>
+            <input id="pwd" type="password" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg btn-block">Sign in</button>
+        </form>
+
+        <div class="auth-divider">or continue with</div>
+
+        <div class="oauth-row">
+          <button class="btn btn-outline">
+            <i data-lucide="mail" style="width:16px;height:16px"></i> Google
+          </button>
+          <button class="btn btn-outline">
+            <i data-lucide="github" style="width:16px;height:16px"></i> GitHub
+          </button>
+        </div>
+
+        <div class="auth-foot">
+          Don't have an account? <a href="#signup">Sign up</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       PAGE: SIGN UP
+       ============================================================ -->
+  <section class="page" id="page-signup">
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <div class="auth-head">
+          <div class="brand-mark" style="margin:0 auto 0.75rem;">A</div>
+          <h1>Create your account</h1>
+          <p>Join AuraStore — it takes 30 seconds</p>
+        </div>
+
+        <form onsubmit="event.preventDefault(); alert('Wireframe — sign-up handler would go here');">
+          <div class="field">
+            <label for="su-email">Email address</label>
+            <input id="su-email" type="email" placeholder="you@example.com" autocomplete="email" />
+          </div>
+          <div class="field">
+            <label for="su-pwd">Password</label>
+            <input id="su-pwd" type="password" placeholder="At least 8 characters" autocomplete="new-password" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg btn-block">Create account</button>
+        </form>
+
+        <div class="auth-divider">or continue with</div>
+
+        <div class="oauth-row">
+          <button class="btn btn-outline"><i data-lucide="mail" style="width:16px;height:16px"></i> Google</button>
+          <button class="btn btn-outline"><i data-lucide="github" style="width:16px;height:16px"></i> GitHub</button>
+        </div>
+
+        <div class="auth-foot">
+          Already have an account? <a href="#signin">Sign in</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       PAGE: 404
+       ============================================================ -->
+  <section class="page" id="page-404">
+    <div class="container">
+      <div class="state large">
+        <div class="state-illustration">
+          <svg viewBox="0 0 200 200" width="160" height="160" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--muted-foreground)">
+            <circle cx="100" cy="100" r="70" stroke-dasharray="4 4" opacity="0.5" />
+            <text x="100" y="92" text-anchor="middle" font-family="Geist, sans-serif" font-size="56" font-weight="700" fill="currentColor">404</text>
+            <text x="100" y="125" text-anchor="middle" font-family="Geist, sans-serif" font-size="11" fill="currentColor" opacity="0.7">PAGE NOT FOUND</text>
+            <path d="M30 30 L170 170 M170 30 L30 170" stroke="currentColor" stroke-width="1" opacity="0.15" />
+          </svg>
+        </div>
+        <h2>Lost in the catalog</h2>
+        <p>The page you're looking for has wandered off. Let's get you back to something good.</p>
+        <div class="actions">
+          <a href="#home" class="btn btn-primary btn-lg">
+            <i data-lucide="home" style="width:16px;height:16px"></i> Back to home
+          </a>
+          <a href="#products" class="btn btn-outline btn-lg">Browse products</a>
+        </div>
+        <div style="margin-top:3rem;display:flex;gap:0.5rem;flex-wrap:wrap;justify-content:center;">
+          <span style="color:var(--muted-foreground);font-size:0.875rem;">Popular:</span>
+          <a href="#category/electronics" class="chip">Electronics</a>
+          <a href="#category/clothing" class="chip">Clothing</a>
+          <a href="#category/home" class="chip">Home</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       PAGE: ERROR (inline, e.g. Strapi 500)
+       ============================================================ -->
+  <section class="page" id="page-error">
+    <div class="container">
+      <div class="state large">
+        <div class="state-icon" style="width:5rem;height:5rem;">
+          <i data-lucide="alert-triangle" style="width:32px;height:32px"></i>
+        </div>
+        <h2>Couldn't load products</h2>
+        <p>Our catalog service is taking a moment. Please try again — if the problem persists, our team has been notified.</p>
+        <div class="actions">
+          <button class="btn btn-primary btn-lg" onclick="location.reload()">
+            <i data-lucide="refresh-ccw" style="width:16px;height:16px"></i> Try again
+          </button>
+          <a href="#home" class="btn btn-outline btn-lg">Go home</a>
+        </div>
+        <p style="margin-top:1.5rem;font-size:0.75rem;color:var(--muted-foreground);font-family:var(--font-mono);">Error: ECONNREFUSED 127.0.0.1:1337</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       PAGE: EMPTY STATE (in listing)
+       ============================================================ -->
+  <section class="page" id="page-empty">
+    <div class="container">
+      <div class="page-head" style="padding-top:2rem;">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a href="#home">Home</a>
+          <span class="sep">/</span>
+          <span>Products</span>
+        </nav>
+        <h1>All products</h1>
+      </div>
+
+      <div class="filter-bar">
+        <button class="chip">All</button>
+        <button class="chip active">Books <span class="count-pill">0</span></button>
+        <button class="chip">Electronics</button>
+      </div>
+
+      <div class="state" style="padding:6rem 1rem;">
+        <div class="state-icon">
+          <i data-lucide="package-open" style="width:28px;height:28px"></i>
+        </div>
+        <h3>No products in this category yet</h3>
+        <p>We're curating new arrivals for this category. Check back soon, or browse other categories.</p>
+        <div class="actions">
+          <a href="#products" class="btn btn-primary">Browse all products</a>
+          <button class="btn btn-outline">Notify me</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       PAGE: SKELETON LOADING (showcase)
+       ============================================================ -->
+  <section class="page" id="page-skeleton">
+    <div class="container">
+      <div class="page-head" style="padding-top:2rem;">
+        <h1>Loading products…</h1>
+        <p class="lede">Wireframe showing the skeleton state during RSC fetch.</p>
+      </div>
+      <div class="filter-bar" style="visibility:hidden;">.</div>
+      <div class="grid">
+        <div><div class="skeleton sk-card-media"></div><div class="skeleton sk-line short"></div><div class="skeleton sk-line mid"></div><div class="skeleton sk-line tall"></div></div>
+        <div><div class="skeleton sk-card-media"></div><div class="skeleton sk-line short"></div><div class="skeleton sk-line mid"></div><div class="skeleton sk-line tall"></div></div>
+        <div><div class="skeleton sk-card-media"></div><div class="skeleton sk-line short"></div><div class="skeleton sk-line mid"></div><div class="skeleton sk-line tall"></div></div>
+        <div><div class="skeleton sk-card-media"></div><div class="skeleton sk-line short"></div><div class="skeleton sk-line mid"></div><div class="skeleton sk-line tall"></div></div>
+        <div><div class="skeleton sk-card-media"></div><div class="skeleton sk-line short"></div><div class="skeleton sk-line mid"></div><div class="skeleton sk-line tall"></div></div>
+        <div><div class="skeleton sk-card-media"></div><div class="skeleton sk-line short"></div><div class="skeleton sk-line mid"></div><div class="skeleton sk-line tall"></div></div>
+        <div><div class="skeleton sk-card-media"></div><div class="skeleton sk-line short"></div><div class="skeleton sk-line mid"></div><div class="skeleton sk-line tall"></div></div>
+        <div><div class="skeleton sk-card-media"></div><div class="skeleton sk-line short"></div><div class="skeleton sk-line mid"></div><div class="skeleton sk-line tall"></div></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ================================================================
+     FOOTER (multi-column dark)
+     ================================================================ -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <a href="#home" class="brand">
+          <span class="brand-mark">A</span>
+          AuraStore
+        </a>
+        <p class="footer-blurb">
+          Hand-picked essentials from independent makers. Honest pricing, fast shipping, no clutter.
+        </p>
+        <form class="newsletter" onsubmit="event.preventDefault();">
+          <input type="email" placeholder="your@email.com" aria-label="Email for newsletter" />
+          <button type="submit">Subscribe</button>
+        </form>
+      </div>
+
+      <div>
+        <h4>Shop</h4>
+        <ul>
+          <li><a href="#products">All products</a></li>
+          <li><a href="#category/electronics">Electronics</a></li>
+          <li><a href="#category/clothing">Clothing</a></li>
+          <li><a href="#category/home">Home</a></li>
+          <li><a href="#category/books">Books</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#about">About</a></li>
+          <li><a href="#about">Sustainability</a></li>
+          <li><a href="#about">Careers</a></li>
+          <li><a href="#about">Press</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#about">Help center</a></li>
+          <li><a href="#about">Shipping</a></li>
+          <li><a href="#about">Returns</a></li>
+          <li><a href="#about">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>© 2026 AuraStore. All rights reserved.</span>
+      <div class="policies">
+        <a href="#about">Privacy</a>
+        <a href="#about">Terms</a>
+        <a href="#about">Cookies</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ================================================================
+     SCRIPT (router + sample data + interactions)
+     ================================================================ -->
+<script>
+  // ---------- Sample product catalog (mirrors backend/scripts/seed.ts) ----------
+  const PRODUCTS = [
+    { id: 1, slug: 'wireless-headphones', name: 'Wireless over-ear headphones', price: 2499, comparePrice: 3999, category: { slug: 'electronics', name: 'Electronics' }, featured: true, image: 'wireless-headphones' },
+    { id: 2, slug: 'cotton-tshirt',      name: 'Essential cotton t-shirt',    price: 799,  comparePrice: null,  category: { slug: 'clothing',     name: 'Clothing' },                  image: 'cotton-tshirt' },
+    { id: 3, slug: 'ceramic-mug',        name: 'Hand-thrown ceramic mug',     price: 449,  comparePrice: 699,  category: { slug: 'home',         name: 'Home' },                      image: 'ceramic-mug' },
+    { id: 4, slug: 'smart-speaker',      name: 'Compact smart speaker',       price: 3999, comparePrice: null,  category: { slug: 'electronics',  name: 'Electronics' }, featured: true, image: 'smart-speaker' },
+    { id: 5, slug: 'linen-shirt',        name: 'Relaxed linen shirt',         price: 1899, comparePrice: 2499, category: { slug: 'clothing',     name: 'Clothing' },                  image: 'linen-shirt' },
+    { id: 6, slug: 'wireless-mouse',     name: 'Ergonomic wireless mouse',    price: 1299, comparePrice: null,  category: { slug: 'electronics',  name: 'Electronics' },               image: 'wireless-mouse' },
+    { id: 7, slug: 'aroma-diffuser',     name: 'Aroma diffuser',              price: 2199, comparePrice: null,  category: { slug: 'home',         name: 'Home' },                      image: 'aroma-diffuser' },
+    { id: 8, slug: 'denim-jacket',       name: 'Classic denim jacket',        price: 3499, comparePrice: null,  category: { slug: 'clothing',     name: 'Clothing' },                  image: 'denim-jacket' },
+    { id: 9, slug: 'desk-lamp',          name: 'Adjustable desk lamp',        price: 1799, comparePrice: 2299, category: { slug: 'home',         name: 'Home' },                      image: 'desk-lamp' },
+    { id: 10, slug: 'usb-c-hub',         name: '7-in-1 USB-C hub',           price: 1499, comparePrice: null,  category: { slug: 'electronics', name: 'Electronics' },               image: 'usb-c-hub' },
+    { id: 11, slug: 'wool-scarf',        name: 'Merino wool scarf',           price: 1299, comparePrice: null,  category: { slug: 'clothing',    name: 'Clothing' },                  image: 'wool-scarf' },
+    { id: 12, slug: 'minimalist-design', name: 'The Art of Minimalist Design', price: 899, comparePrice: 1199, category: { slug: 'books',       name: 'Books' },                     image: 'minimalist-design' },
+  ];
+
+  const CATEGORIES = [
+    { slug: 'electronics', name: 'Electronics', icon: 'cpu', description: 'Audio gear, smart devices, and accessories built for everyday use.' },
+    { slug: 'clothing',     name: 'Clothing',    icon: 'shirt', description: 'Timeless basics and seasonal pieces in honest materials.' },
+    { slug: 'home',         name: 'Home',        icon: 'lamp',  description: 'Objects that make your space feel like home.' },
+    { slug: 'books',        name: 'Books',       icon: 'book-open', description: 'Reading on craft, design, and slow living.' },
+  ];
+
+  // ---------- Helpers ----------
+  const fmtINR = n => '₹' + n.toLocaleString('en-IN');
+  const discountPct = (price, was) => (!was || was <= price) ? 0 : Math.round(((was - price) / was) * 100);
+  const img = (seed) => `https://picsum.photos/seed/${seed}/800/800`;
+
+  // ---------- Render: product card ----------
+  function productCard(p) {
+    const pct = discountPct(p.price, p.comparePrice);
+    return `
+      <a href="#product/${p.slug}" class="card" data-cat="${p.category.slug}">
+        <div class="card-media">
+          <img src="${img(p.image)}" alt="${p.name}" loading="lazy" />
+          ${pct ? `<span class="sale-badge">−${pct}%</span>` : ''}
+          ${p.featured ? `<span class="featured-badge">Featured</span>` : ''}
+          <div class="quick">View product <i data-lucide="arrow-up-right" style="width:14px;height:14px"></i></div>
+        </div>
+        <div class="card-body">
+          <span class="card-cat">${p.category.name}</span>
+          <h3 class="card-name">${p.name}</h3>
+          <div class="card-price">
+            <span class="now">${fmtINR(p.price)}</span>
+            ${p.comparePrice ? `<span class="was">${fmtINR(p.comparePrice)}</span><span class="save">Save ${pct}%</span>` : ''}
+          </div>
+        </div>
+      </a>`;
+  }
+
+  // ---------- Page routing ----------
+  function show(hash) {
+    hash = (hash || '#home').replace(/^#/, '');
+    const [page, ...rest] = hash.split('/');
+    const slug = rest.join('/');
+
+    // Hide all pages
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+    // Header scroll state reset
+    document.getElementById('header').classList.add('scrolled');
+
+    let pageId = 'page-home';
+    if (page === 'products') pageId = 'page-products';
+    else if (page === 'product') pageId = 'page-product';
+    else if (page === 'category') pageId = 'page-category';
+    else if (page === 'signin') pageId = 'page-signin';
+    else if (page === 'signup') pageId = 'page-signup';
+    else if (page === '404' || page === 'not-found') pageId = 'page-404';
+    else if (page === 'error') pageId = 'page-error';
+    else if (page === 'empty') pageId = 'page-empty';
+    else if (page === 'skeleton') pageId = 'page-skeleton';
+    else if (page === 'about') pageId = 'page-home'; // about falls back to home for demo
+
+    document.getElementById(pageId)?.classList.add('active');
+
+    // Active nav state
+    document.querySelectorAll('[data-nav]').forEach(a => a.classList.remove('active'));
+    const navKey = page === 'product' ? 'products' : (page === 'category' ? slug : page);
+    document.querySelectorAll(`[data-nav="${navKey}"]`).forEach(a => a.classList.add('active'));
+
+    // Page-specific renders
+    if (page === 'home') {
+      renderGrid('featuredGrid', PRODUCTS.filter(p => p.featured).slice(0, 4));
+    }
+    if (page === 'products') {
+      renderGrid('productsGrid', PRODUCTS);
+      wireCategoryChips('productsGrid');
+    }
+    if (page === 'product') {
+      // static for now (wireless-headphones)
+      // (could switch on slug for future)
+    }
+    if (page === 'category') {
+      const cat = CATEGORIES.find(c => c.slug === slug);
+      if (cat) {
+        document.getElementById('catTitle').textContent = cat.name;
+        document.getElementById('catDesc').textContent = cat.description;
+        document.getElementById('catCrumbName').textContent = cat.name;
+        renderCategoryFilter('catFilterBar', slug);
+        renderGrid('catGrid', PRODUCTS.filter(p => p.category.slug === slug));
+        wireCategoryChips('catGrid', slug);
+      }
+    }
+
+    // Close mobile menu
+    document.getElementById('mobilePanel').classList.remove('open');
+    document.getElementById('menuToggle').setAttribute('aria-expanded', 'false');
+    document.getElementById('menuIcon').setAttribute('data-lucide', 'menu');
+
+    // Re-render icons + scroll to top
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function renderGrid(id, items) {
+    document.getElementById(id).innerHTML = items.map(productCard).join('');
+  }
+
+  function renderRelated() {
+    renderGrid('relatedGrid', PRODUCTS.filter(p => p.category.slug === 'electronics' && p.slug !== 'wireless-headphones').slice(0, 4));
+  }
+
+  function renderCategoryFilter(targetId, activeSlug) {
+    const all = PRODUCTS.length;
+    const bar = document.getElementById(targetId);
+    bar.innerHTML = `
+      <button class="chip ${!activeSlug ? 'active' : ''}" data-cat="">
+        All <span class="count-pill">${all}</span>
+      </button>
+      ${CATEGORIES.map(c => {
+        const count = PRODUCTS.filter(p => p.category.slug === c.slug).length;
+        return `<button class="chip ${activeSlug === c.slug ? 'active' : ''}" data-cat="${c.slug}">
+          <i data-lucide="${c.icon}" style="width:14px;height:14px"></i>
+          ${c.name} <span class="count-pill">${count}</span>
+        </button>`;
+      }).join('')}
+    `;
+  }
+
+  function wireCategoryChips(gridId, currentSlug) {
+    const grid = document.getElementById(gridId);
+    const filterBar = grid.previousElementSibling;
+    filterBar.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const cat = chip.dataset.cat;
+        if (cat) location.hash = `#category/${cat}`;
+        else location.hash = '#products';
+      });
+    });
+  }
+
+  // ---------- Header shadow on scroll ----------
+  window.addEventListener('scroll', () => {
+    document.getElementById('header').classList.toggle('scrolled', window.scrollY > 4);
+  }, { passive: true });
+
+  // ---------- Mobile menu toggle ----------
+  document.getElementById('menuToggle').addEventListener('click', () => {
+    const panel = document.getElementById('mobilePanel');
+    const open = panel.classList.toggle('open');
+    document.getElementById('menuToggle').setAttribute('aria-expanded', String(open));
+    document.getElementById('menuIcon').setAttribute('data-lucide', open ? 'x' : 'menu');
+    lucide.createIcons();
+  });
+
+  // ---------- Wireframe-only nav shortcuts (top-bar routes) ----------
+  document.querySelectorAll('[data-route]').forEach(b => {
+    b.addEventListener('click', () => { location.hash = b.dataset.route; });
+  });
+
+  // ---------- Product detail: thumb switcher ----------
+  document.querySelectorAll('#pdThumbs .thumb').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('#pdThumbs .thumb').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById('pdMainImg').src = t.dataset.img;
+    });
+  });
+
+  // ---------- Color swatches ----------
+  document.querySelectorAll('.swatch').forEach(s => {
+    s.addEventListener('click', () => {
+      s.parentElement.querySelectorAll('.swatch').forEach(x => x.classList.remove('active'));
+      s.classList.add('active');
+    });
+  });
+
+  // ---------- Boot ----------
+  renderRelated();
+  window.addEventListener('hashchange', () => show(location.hash));
+  show(location.hash);
+</script>
+</body>
+</html>

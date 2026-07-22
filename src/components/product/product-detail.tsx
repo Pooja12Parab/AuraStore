@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import Link from 'next/link'
 import { PriceDisplay } from './price-display'
 import { strapiMedia } from '@/lib/strapi'
 import type { StrapiProduct } from '@/types/strapi'
@@ -12,7 +13,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
     <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="grid gap-8 md:grid-cols-2">
         <div className="space-y-4">
-          {product.images.map((image) => (
+          {product.images?.map((image) => (
             <div key={image.id} className="aspect-square overflow-hidden rounded-lg bg-gray-100">
               <Image
                 src={strapiMedia(image)}
@@ -25,9 +26,12 @@ export function ProductDetail({ product }: ProductDetailProps) {
           ))}
         </div>
         <div className="space-y-4">
-          <span className="inline-block rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
+          <Link
+            href={`/category/${product.category.slug}`}
+            className="inline-block rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-200"
+          >
             {product.category.name}
-          </span>
+          </Link>
           <h1 className="text-3xl font-bold">{product.name}</h1>
           <PriceDisplay price={product.price} comparePrice={product.comparePrice} />
           <div className="prose max-w-none text-gray-600">{product.description}</div>

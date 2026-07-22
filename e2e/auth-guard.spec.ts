@@ -1,4 +1,4 @@
-import { test, expect } from './playwright.setup'
+import { test, expect } from './fixtures/auth'
 
 const hasClerkKeys =
   !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
@@ -6,7 +6,7 @@ const hasClerkKeys =
 
 test.skip(!hasClerkKeys, 'Clerk keys not set — skipping auth-guard E2E')
 
-test('unauthenticated GET /orders does not return 200', async ({ request }) => {
+test('unauthenticated GET /orders redirects to sign-in', async ({ request }) => {
   const response = await request.get('/orders', { maxRedirects: 0, failOnStatusCode: false })
   expect(response.status()).not.toBe(200)
   expect([301, 302, 307, 308]).toContain(response.status())

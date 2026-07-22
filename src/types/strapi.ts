@@ -29,7 +29,7 @@ export interface StrapiProduct {
   description: string;
   price: number;
   comparePrice?: number;
-  images: StrapiImage[];
+  images?: StrapiImage[];
   category: StrapiCategory;
   stock?: number;
   featured?: boolean;

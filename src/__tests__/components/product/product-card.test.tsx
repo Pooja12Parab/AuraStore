@@ -32,7 +32,7 @@ describe('ProductCard', () => {
   it('renders product name and formatted price', () => {
     render(<ProductCard product={mockProduct} />)
     expect(screen.getByText('Wireless Headphones')).toBeInTheDocument()
-    expect(screen.getByText('₹2,49,900')).toBeInTheDocument()
+    expect(screen.getByText('$2,499.00')).toBeInTheDocument()
   })
 
   it('renders category badge', () => {

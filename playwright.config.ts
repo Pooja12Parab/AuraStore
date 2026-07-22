@@ -3,6 +3,7 @@ import dotenv from 'dotenv'
 import path from 'path'
 
 dotenv.config({ path: path.resolve(__dirname, '.env.local') })
+dotenv.config({ path: path.resolve(__dirname, '.env') })
 
 export default defineConfig({
   testDir: './e2e',
@@ -33,8 +34,13 @@ export default defineConfig({
         storageState: 'playwright/.auth/user.json',
       },
       dependencies: ['setup'],
+      testIgnore: /auth\.spec\.ts/,
     },
-{ name: 'chromium-unauth', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'chromium-unauth',
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
+    },
     {
       name: 'firefox',
       use: {
@@ -55,7 +61,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm dev',
+    command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

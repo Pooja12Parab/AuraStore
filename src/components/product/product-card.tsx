@@ -13,7 +13,7 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <Link href={`/products/${product.slug}`} className="group">
       <div className="aspect-square overflow-hidden rounded-lg bg-gray-100">
-        {product.images[0] ? (
+        {product.images?.[0] ? (
           <Image
             src={strapiMedia(product.images[0])}
             alt={product.images[0].alternativeText || product.name}

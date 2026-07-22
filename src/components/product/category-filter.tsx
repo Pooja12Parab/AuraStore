@@ -54,4 +54,3 @@ export function CategoryFilter({ categories, active }: CategoryFilterProps) {
     </div>
   )
 }
-

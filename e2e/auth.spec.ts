@@ -1,4 +1,4 @@
-import { test, expect } from './playwright.setup'
+import { test, expect } from './fixtures/auth'
 import { clerk } from '@clerk/testing/playwright'
 
 const hasClerkKeys =
@@ -7,13 +7,13 @@ const hasClerkKeys =
 
 test.skip(!hasClerkKeys, 'Clerk keys not set — skipping E2E auth tests')
 
-test('signed-in user sees profile menu', async ({ page }) => {
+test('signed-in user sees profile menu (fresh sign-in)', async ({ page }) => {
   await page.goto('/')
   await clerk.signIn({
     page,
     emailAddress: process.env.E2E_CLERK_USER_EMAIL!,
   })
-  await expect(page.getByTestId('user-button')).toBeVisible()
+  await expect(page.locator('.cl-userButtonTrigger')).toBeVisible()
 })
 
 test('signed-out user sees sign-in button', async ({ page }) => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { cn, formatINR } from '@/lib/utils'
+import { cn, formatPrice } from '@/lib/utils'
 
 describe('cn', () => {
   it('merges truthy classes and drops falsy ones', () => {
@@ -15,20 +15,21 @@ describe('cn', () => {
   })
 })
 
-describe('formatINR', () => {
-  it('formats whole rupees in Indian numbering', () => {
-    expect(formatINR(249900)).toBe('₹2,49,900')
-    expect(formatINR(79900)).toBe('₹79,900')
-    expect(formatINR(1000)).toBe('₹1,000')
+describe('formatPrice', () => {
+  it('formats cents as USD', () => {
+    expect(formatPrice(249900)).toBe('$2,499.00')
+    expect(formatPrice(79900)).toBe('$799.00')
+    expect(formatPrice(1000)).toBe('$10.00')
+    expect(formatPrice(9900)).toBe('$99.00')
   })
 
-  it('returns ₹0 for zero', () => {
-    expect(formatINR(0)).toBe('₹0')
+  it('returns $0.00 for zero', () => {
+    expect(formatPrice(0)).toBe('$0.00')
   })
 
-  it('returns ₹0 for null or NaN', () => {
-    expect(formatINR(null as unknown as number)).toBe('₹0')
-    expect(formatINR(NaN)).toBe('₹0')
-    expect(formatINR(undefined as unknown as number)).toBe('₹0')
+  it('returns $0 for null or NaN', () => {
+    expect(formatPrice(null as unknown as number)).toBe('$0')
+    expect(formatPrice(NaN)).toBe('$0')
+    expect(formatPrice(undefined as unknown as number)).toBe('$0')
   })
 })

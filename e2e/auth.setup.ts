@@ -1,7 +1,11 @@
-﻿import { test as setup, expect } from '@playwright/test'
-import { clerk } from '@clerk/testing/playwright'
+﻿import { test as setup, expect } from './fixtures/auth'
+import { clerk, clerkSetup } from '@clerk/testing/playwright'
 
 const authFile = 'playwright/.auth/user.json'
+
+setup.beforeAll(async () => {
+  await clerkSetup()
+})
 
 setup('authenticate', async ({ page }) => {
   await page.goto('/')
@@ -9,6 +13,7 @@ setup('authenticate', async ({ page }) => {
     page,
     emailAddress: process.env.E2E_CLERK_USER_EMAIL!,
   })
-  await expect(page.getByTestId('user-button')).toBeVisible()
+  await expect(page.getByRole('button', { name: /^sign in$/i })).toBeHidden()
+  await expect(page.locator('.cl-userButtonTrigger')).toBeVisible()
   await page.context().storageState({ path: authFile })
 })
