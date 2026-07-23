@@ -1,4 +1,4 @@
-import { z } from 'zod'
+﻿import { z } from 'zod'
 
 // Phase 2 currency policy: the project's existing Phase 1 catalog stores
 // prices as integer cents (USD convention; formatPrice divides by 100 to
@@ -53,6 +53,7 @@ export type CheckoutInput = z.infer<typeof CheckoutInputSchema>
 
 export type OrderItemSnapshot = {
   productId: string
+  slug: string
   name: string
   price: number
   qty: number
