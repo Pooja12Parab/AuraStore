@@ -1,4 +1,6 @@
-﻿import Image from 'next/image'
+﻿'use client'
+
+import Image from 'next/image'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { CategoryBadge } from './category-badge'
