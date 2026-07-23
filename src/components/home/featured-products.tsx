@@ -1,8 +1,7 @@
-'use client'
+﻿'use client'
 
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import { fetchFeaturedProducts } from '@/lib/strapi'
 import { ProductCard } from '@/components/product/product-card'
 import { ChevronRight } from 'lucide-react'
 
@@ -23,9 +22,17 @@ export function FeaturedProducts() {
   const { data, isLoading } = useQuery({
     queryKey: ['featured-products'],
     queryFn: async () => {
-      const res = await fetchFeaturedProducts()
-      return (res as { data: ProductLite[] }).data
+      try {
+        const res = await fetch('/api/featured-products', { cache: 'no-store' })
+        if (!res.ok) return []
+        const body = (await res.json()) as { data?: ProductLite[] }
+        return body.data ?? []
+      } catch {
+        return []
+      }
     },
+    retry: 1,
+    refetchOnWindowFocus: false,
   })
 
   return (
@@ -76,12 +83,15 @@ export function FeaturedProducts() {
           ))}
         </ul>
       ) : (
-        <p className="rounded-md border border-dashed border-border bg-surface px-4 py-8 text-center text-sm text-muted-foreground">
-          No featured products yet — browse the{' '}
+        <p
+          className="rounded-md border border-dashed border-border bg-surface px-4 py-8 text-center text-sm text-muted-foreground"
+          data-testid="home-featured-empty"
+        >
+          Featured products are loading — visit{' '}
           <Link href="/products" className="text-brand-700 underline">
-            full catalog
-          </Link>
-          .
+            the full catalog
+          </Link>{' '}
+          in the meantime.
         </p>
       )}
     </section>
