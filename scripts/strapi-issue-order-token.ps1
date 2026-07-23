@@ -106,6 +106,14 @@ try {
 
 if (-not $created.data.accessKey) { throw "Token creation succeeded but no accessKey in response: $($created | ConvertTo-Json -Depth 4)" }
 
+# Verify scope registration: if Strapi persisted the token without
+# permissions (silently drops malformed bodies), 401/403 will follow.
+$persistedPerms = @($created.data.permissions)
+if ($persistedPerms.Count -lt 4) {
+    Write-Warning ('Token registered with only {0} permissions (expected 4). ' +
+        'Strapi may have silently dropped the scope list; DELETE this token and re-create via the verified body shape (flat array, NOT wrapped).') -f $persistedPerms.Count
+}
+
 Write-Host ""
 Write-Host "OK -- created API token '$Name' (id $($created.data.id))."
 Write-Host "Add this line to .env.local:"

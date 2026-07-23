@@ -106,16 +106,19 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
 
 ### Setup (AGENT)
 
-- [ ] **Step 1.1: Install Phase 2 npm deps** (root + dev, single command):
+- [ ] **Step 1.1: Install Phase 2 deps via `pnpm` (matches Phase 1 plan + README + pnpm-lock.yaml)**:
   ```bash
-  npm i sonner@^1 react-hook-form@^7 @hookform/resolvers@^3 zod@^3 razorpay
+  pnpm add sonner@^1 react-hook-form@^7 @hookform/resolvers@^3 zod@^3 razorpay
   ```
-  Verify `package.json`:
+  Verify `package.json` includes the new entries under `dependencies`:
   ```json
   {
-    "dependencies": { "sonner": "^1...", "react-hook-form": "^7...", "@hookform/resolvers": "^3...", "zod": "^3...", "razorpay": "latest" }
+    "dependencies": { "sonner": "^1...", "react-hook-form": "^7...", "@hookform/resolvers": "^3...", "zod": "^3...", "razorpay": "^2..." }
   }
   ```
+  Honor Phase 1 NFR rationale: pnpm's content-addressable store keeps install fast and disk-efficient across all workspaces.
+
+  > **Frontend vs backend PM note:** the **frontend** (repo root) uses **pnpm** per Phase 1 / README; the **backend** (`backend/`) uses **npm** (it carries its own `package-lock.json`). The plan's `pnpm ...` commands below target the frontend; the `npm run ...` commands in Steps 1.2a and 1.3 target `backend/`. Don't migrate them.
   **Verify .env.local exists but is gitignored** — `backend/.env` is already in `backend/.gitignore`; on the frontend side, `.env.local` and `.env*.local` are in the Next.js default `.gitignore`. No edits required unless the prior session left stray files in the repo root.
 
 - [ ] **Step 1.1a: Verify `.gitignore` covers Phase 2 scratch.** Most hygiene entries are already in `.gitignore` from earlier sessions (`.tmp/`, `tmp-*.log`, `.clerk/`, `login.json`, etc.). **Add if missing** (per memory `aurastore.gitignore_noncommittables`):
@@ -214,29 +217,29 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
 
 - [ ] **Step 1.9: Write `tests/unit/cart.test.ts`** (8 tests per [Testing LLD §5.1](./AuraStore_Testing_LLD_Phase2.md)):
   - Empty, add-new, add-increment, set0-removes, setN-updates, remove, totalQuantity, subtotal.
-  - Run: `npx vitest run tests/unit/cart.test.ts` → all 8 PASS.
+  - Run: `pnpm vitest run tests/unit/cart.test.ts` → all 8 PASS.
 
 - [ ] **Step 1.10: Write `tests/unit/CartIconButton.test.tsx`** (2 tests per [Testing LLD §5.6](./AuraStore_Testing_LLD_Phase2.md)):
   - Empty: no badge; non-empty: shows total.
-  - Run: `npx vitest run tests/unit/CartIconButton.test.tsx` → PASS.
+  - Run: `pnpm vitest run tests/unit/CartIconButton.test.tsx` → PASS.
 
 - [ ] **Step 1.11: Write `tests/unit/useAddToCart.test.ts`** (2 tests per [Testing LLD §5.4](./AuraStore_Testing_LLD_Phase2.md)):
   - Success path: toast + cart; qty 0: no-op.
-  - Run: `npx vitest run tests/unit/useAddToCart.test.ts` → PASS.
+  - Run: `pnpm vitest run tests/unit/useAddToCart.test.ts` → PASS.
 
 ### Verification (exit criteria)
 
 - [ ] `cd backend && npm run seed && npm run seed:orders` both return 0; the orders `curl` returns `{"data":[{...,"documentId":"ord_paid_1",...},{...,"documentId":"ord_pending_1",...}],"meta":{"pagination":{"total":2}}}`.
 - [ ] `curl -H "Authorization: Bearer $STRAPI_API_TOKEN" "http://localhost:1337/api/orders"` → **`403 Forbidden`** (the Phase 1 read-only token must NOT see orders — proves least-privilege token separation works).
-- [ ] `npx tsc --noEmit` clean.
-- [ ] `npx vitest run tests/unit/cart.test.ts tests/unit/CartIconButton.test.tsx tests/unit/useAddToCart.test.ts` → all PASS (10 new tests).
-- [ ] Full Phase 1 green bar still PASSES (re-run `npm run test`).
+- [ ] `pnpm exec tsc --noEmit` clean.
+- [ ] `pnpm vitest run tests/unit/cart.test.ts tests/unit/CartIconButton.test.tsx tests/unit/useAddToCart.test.ts` → all PASS (10 new tests).
+- [ ] Full Phase 1 green bar still PASSES (re-run `pnpm test`).
 
 ### Commit
 
 - [ ] **Step 1.12: Commit**
   ```bash
-  git add backend/src/api/order backend/scripts/seed-orders.ts package.json package-lock.json \
+          git add backend/src/api/order backend/scripts/seed-orders.ts package.json pnpm-lock.yaml \
           src/app/layout.tsx src/lib/cart.ts src/lib/cart-ui.ts \
           tests/setup/sonner.ts tests/setup/next-headers.ts tests/setup/razorpay-checkout.ts \
           tests/msw/handlers/orders.ts tests/msw/factories/order.ts \
@@ -394,23 +397,23 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
 
 - [ ] **Step 2.7: Write `tests/unit/verifyRazorpaySignature.test.ts`** (2 tests per [Testing LLD §5.2](./AuraStore_Testing_LLD_Phase2.md)):
   - Valid sig → true; tampered sig → false.
-  - Run: `npx vitest run tests/unit/verifyRazorpaySignature.test.ts` → PASS.
+  - Run: `pnpm vitest run tests/unit/verifyRazorpaySignature.test.ts` → PASS.
 
 - [ ] **Step 2.8: Write `tests/unit/order-total.test.ts`** (2 tests per [Testing LLD §5.5](./AuraStore_Testing_LLD_Phase2.md)):
-  - Run: `npx vitest run tests/unit/order-total.test.ts` → PASS.
+  - Run: `pnpm vitest run tests/unit/order-total.test.ts` → PASS.
 
 - [ ] **Step 2.9: Write `tests/integration/orders-create.test.ts`** (6 tests per [Testing LLD §6.1](./AuraStore_Testing_LLD_Phase2.md)):
   - Use `vi.mock("razorpay")` for the SDK; mock `@clerk/nextjs/server` per test.
-  - Run: `npx vitest run tests/integration/orders-create.test.ts` → all PASS.
+  - Run: `pnpm vitest run tests/integration/orders-create.test.ts` → all PASS.
 
 - [ ] **Step 2.10: Write `tests/integration/razorpay-webhook.test.ts`** (6 tests per [Testing LLD §6.2](./AuraStore_Testing_LLD_Phase2.md)):
   - Hand-craft raw payloads; sign with `crypto.createHmac` using `process.env.RAZORPAY_WEBHOOK_SECRET`.
   - Set `process.env.RAZORPAY_WEBHOOK_SECRET = "whsec_test"` in the test setup.
-  - Run: `npx vitest run tests/integration/razorpay-webhook.test.ts` → all PASS.
+  - Run: `pnpm vitest run tests/integration/razorpay-webhook.test.ts` → all PASS.
 
 ### Verification
 
-- [ ] `npx tsc --noEmit` clean.
+- [ ] `pnpm exec tsc --noEmit` clean.
 - [ ] All 12 new tests (2 unit + 6 + 6 integration) PASS.
 - [ ] Phase 1 green bar still PASSES.
 
@@ -437,7 +440,7 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
 
 - [ ] **Step 3.1: shadcn add (Sheet + Separator + Input + Label + RadioGroup)**:
   ```bash
-  npx shadcn@latest add sheet separator input label radio-group
+  pnpm dlx shadcn@latest add sheet separator input label radio-group
   ```
   Verify the components land in `src/components/ui/`.
 
@@ -516,21 +519,21 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
 
 - [ ] **Step 3.12: Write `tests/integration/orders-query.test.ts`** (3 tests per [Testing LLD §6.3](./AuraStore_Testing_LLD_Phase2.md)):
   - `getOrdersForUser`, `getOrderByDocumentId` (owner check + null for other user).
-  - Run: `npx vitest run tests/integration/orders-query.test.ts` → PASS.
+  - Run: `pnpm vitest run tests/integration/orders-query.test.ts` → PASS.
 
 - [ ] **Step 3.13: Write `tests/unit/useRemoveFromCart.test.ts`** (2 tests per [Testing LLD §5.7](./AuraStore_Testing_LLD_Phase2.md)):
-  - Run: `npx vitest run tests/unit/useRemoveFromCart.test.ts` → PASS.
+  - Run: `pnpm vitest run tests/unit/useRemoveFromCart.test.ts` → PASS.
 
 - [ ] **Step 3.14: Write `tests/unit/CartDrawer.test.tsx`** (component test — uses stubbed cartUI + sonner spy):
   - Empty state shows "Your cart is empty" + CTA.
   - Non-empty shows items + subtotal.
-  - Run: `npx vitest run tests/unit/CartDrawer.test.tsx` → PASS.
+  - Run: `pnpm vitest run tests/unit/CartDrawer.test.tsx` → PASS.
 
 ### Verification
 
-- [ ] `npx tsc --noEmit` clean.
-- [ ] `npx vitest run` → all Phase 1 + Phase 2 tests so far PASS (10 + 12 + 5 = 27 from Stages 1–3 = 27; the unit subtotal so far is 16, integration is 8 → 24 with one overlap accounted for; see §9 reconciliation).
-- [ ] Manual smoke: `npm run dev` → click cart icon on `/products` → drawer opens; add product → badge increments.
+- [ ] `pnpm exec tsc --noEmit` clean.
+- [ ] `pnpm vitest run` → all Phase 1 + Phase 2 tests so far PASS (10 + 12 + 5 = 27 from Stages 1–3 = 27; the unit subtotal so far is 16, integration is 8 → 24 with one overlap accounted for; see §9 reconciliation).
+- [ ] Manual smoke: `pnpm dev` → click cart icon on `/products` → drawer opens; add product → badge increments.
 
 ### Commit
 
@@ -656,18 +659,18 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
 
 - [ ] **Step 4.8: Write `tests/integration/auth-guard.test.ts`** (2 tests per [Testing LLD §6.4](./AuraStore_Testing_LLD_Phase2.md)):
   - `/checkout` and `/orders` redirect to `/sign-in` when unauthenticated.
-  - Run: `npx vitest run tests/integration/auth-guard.test.ts` → PASS.
+  - Run: `pnpm vitest run tests/integration/auth-guard.test.ts` → PASS.
 
 - [ ] **Step 4.9: Write `tests/integration/checkout-flow.test.tsx`** (2 tests per [Testing LLD §6.5](./AuraStore_Testing_LLD_Phase2.md)):
   - MSW overrides `POST /api/orders/create` per test.
-  - Run: `npx vitest run tests/integration/checkout-flow.test.tsx` → PASS.
+  - Run: `pnpm vitest run tests/integration/checkout-flow.test.tsx` → PASS.
 
 - [ ] **Step 4.10: Write `tests/unit/AddressForm.test.tsx`** (4 tests per [Testing LLD §5.3](./AuraStore_Testing_LLD_Phase2.md)):
-  - Run: `npx vitest run tests/unit/AddressForm.test.tsx` → PASS.
+  - Run: `pnpm vitest run tests/unit/AddressForm.test.tsx` → PASS.
 
 ### Verification
 
-- [ ] `npx tsc --noEmit` clean.
+- [ ] `pnpm exec tsc --noEmit` clean.
 - [ ] All new tests PASS.
 - [ ] Manual: signed in → `/checkout` → fill form → click "Continue to payment" → Razorpay modal opens (Test Mode).
 - [ ] Manual: signed out → `/checkout` → redirected to `/sign-in?redirect_url=/checkout`.
@@ -777,15 +780,15 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
 - [ ] **Step 5.9: Write `tests/unit/confirmation.test.tsx`** (2 tests):
   - Renders order info when `status === "paid"`.
   - Renders "Payment processing…" when `status === "pending"`.
-  - Run: `npx vitest run tests/unit/confirmation.test.tsx` → PASS.
+  - Run: `pnpm vitest run tests/unit/confirmation.test.tsx` → PASS.
 
 - [ ] **Step 5.10: Write `tests/unit/OrderHistoryPage.test.tsx`** (2 tests):
   - Empty state; non-empty list renders `<OrderCard />` per order.
-  - Run: `npx vitest run tests/unit/OrderHistoryPage.test.tsx` → PASS.
+  - Run: `pnpm vitest run tests/unit/OrderHistoryPage.test.tsx` → PASS.
 
 ### Verification
 
-- [ ] `npx tsc --noEmit` clean.
+- [ ] `pnpm exec tsc --noEmit` clean.
 - [ ] All new tests PASS.
 - [ ] Manual: place an order via Test Mode → `/checkout/confirmation` → "Order confirmed" → `/orders` shows the order.
 
@@ -842,28 +845,28 @@ Write each spec under `tests/e2e/phase2/`:
 
 - [ ] **Step 6.5: `tests/e2e/phase2/cart.spec.ts`** (3 tests per [Testing LLD §7.1](./AuraStore_Testing_LLD_Phase2.md)):
   - Add → badge; drawer open + inc/dec/remove; empty state.
-  - Run: `npx playwright test tests/e2e/phase2/cart.spec.ts` → PASS.
+  - Run: `pnpm playwright test tests/e2e/phase2/cart.spec.ts` → PASS.
 
 - [ ] **Step 6.6: `tests/e2e/phase2/cart-persistence.spec.ts`** (1 test):
-  - Run: `npx playwright test tests/e2e/phase2/cart-persistence.spec.ts` → PASS.
+  - Run: `pnpm playwright test tests/e2e/phase2/cart-persistence.spec.ts` → PASS.
 
 - [ ] **Step 6.7: `tests/e2e/phase2/auth-guard.spec.ts`** (1 test):
-  - Run: `npx playwright test tests/e2e/phase2/auth-guard.spec.ts` → PASS.
+  - Run: `pnpm playwright test tests/e2e/phase2/auth-guard.spec.ts` → PASS.
 
 - [ ] **Step 6.8: `tests/e2e/phase2/checkout.spec.ts`** (1 test):
-  - Run: `npx playwright test tests/e2e/phase2/checkout.spec.ts` → PASS.
+  - Run: `pnpm playwright test tests/e2e/phase2/checkout.spec.ts` → PASS.
 
 - [ ] **Step 6.9: `tests/e2e/phase2/payment.spec.ts`** (2 tests):
   - Success card `4111 1111 1111 1111`; failure card `4000 0000 0000 0002`.
-  - Run: `npx playwright test tests/e2e/phase2/payment.spec.ts` → PASS.
+  - Run: `pnpm playwright test tests/e2e/phase2/payment.spec.ts` → PASS.
 
 - [ ] **Step 6.10: `tests/e2e/phase2/orders.spec.ts`** (2 tests):
-  - Run: `npx playwright test tests/e2e/phase2/orders.spec.ts` → PASS.
+  - Run: `pnpm playwright test tests/e2e/phase2/orders.spec.ts` → PASS.
 
 ### Verification
 
-- [ ] `npx playwright test tests/e2e/phase2/` → all 10 PASS.
-- [ ] `npx vitest run` → all 76 PASS (35 Phase 1 + 41 Phase 2 unit + integration).
+- [ ] `pnpm playwright test tests/e2e/phase2/` → all 10 PASS.
+- [ ] `pnpm vitest run` → all 76 PASS (35 Phase 1 + 41 Phase 2 unit + integration).
 - [ ] Coverage thresholds met (stmts ≥ 80, branches ≥ 75, funcs ≥ 80, lines ≥ 80).
 - [ ] **Full pyramid: 22 unit + 19 integration + 10 e2e = 51 Phase 2 tests PASS.**
 
@@ -926,10 +929,10 @@ Write each spec under `tests/e2e/phase2/`:
         - run: cd backend && nohup npm run develop > strapi.log &  # see Step 7.2
         - run: sleep 30 && curl -sf http://localhost:1337/_health || (cat backend/strapi.log && exit 1)
         - run: cd backend && npm run seed && npm run seed:orders
-        - run: npx tsc --noEmit
-        - run: npx vitest run --coverage
-        - run: npx playwright install --with-deps chromium
-        - run: npx playwright test tests/e2e/phase2/
+        - run: pnpm exec tsc --noEmit
+        - run: pnpm vitest run --coverage
+        - run: pnpm playwright install --with-deps chromium
+        - run: pnpm playwright test tests/e2e/phase2/
   ```
 
 - [ ] **Step 7.2: Strapi readiness probe** (avoid the AGENTS.md G4 "no polling loops" trap):
