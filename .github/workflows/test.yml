@@ -107,7 +107,14 @@ jobs:
           E2E_CLERK_USER_EMAIL: ${{ secrets.E2E_CLERK_USER_EMAIL }}
           E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
           STRAPI_API_TOKEN: ${{ secrets.STRAPI_API_TOKEN }}
+          STRAPI_ADMIN_EMAIL: ${{ secrets.STRAPI_ADMIN_EMAIL }}
+          STRAPI_ADMIN_PASSWORD: ${{ secrets.STRAPI_ADMIN_PASSWORD }}
           NEXT_PUBLIC_STRAPI_API_URL: ${{ secrets.NEXT_PUBLIC_STRAPI_API_URL }}
+          # Phase 2 secrets (used by e2e/phase2/* specs)
+          STRAPI_API_TOKEN_WRITE: ${{ secrets.STRAPI_API_TOKEN_WRITE }}
+          NEXT_PUBLIC_RAZORPAY_KEY_ID: ${{ secrets.NEXT_PUBLIC_RAZORPAY_KEY_ID }}
+          RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+          RAZORPAY_WEBHOOK_SECRET: ${{ secrets.RAZORPAY_WEBHOOK_SECRET }}
 
       - name: Upload E2E report
         uses: actions/upload-artifact@v4
