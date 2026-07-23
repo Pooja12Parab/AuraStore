@@ -2,9 +2,11 @@
 import { Geist, Geist_Mono } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
 import { Suspense } from 'react'
+import { Toaster } from 'sonner'
 import { QueryProvider } from '@/providers/query-provider'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
+import { CartDrawer } from '@/components/cart/cart-drawer'
 import './globals.css'
 
 const geistSans = Geist({
@@ -36,6 +38,8 @@ export default function RootLayout({
               <Header />
               <main>{children}</main>
               <Footer />
+              <CartDrawer />
+              <Toaster richColors position="top-right" />
             </QueryProvider>
           </Suspense>
         </body>

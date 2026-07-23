@@ -1,7 +1,7 @@
 ﻿import { db } from './factories'
 
 export function seedTestData() {
-const electronics = db.category.create({
+  const electronics = db.category.create({
     id: 1,
     documentId: 'cat1',
     name: 'Electronics',
@@ -37,5 +37,29 @@ const electronics = db.category.create({
     category: clothing,
     stock: 100,
     featured: false,
+  })
+  // Phase 2: orders are seeded through factory fixtures so /api/orders
+  // handlers have realistic data. Tests that need orders should call
+  // seedOrdersForUser() or use the relevant fixture directly.
+  db.order.create({
+    id: 1,
+    documentId: 'ord_paid_1',
+    clerkUserId: 'user_test_123',
+    total: 499800,
+    status: 'paid',
+    paymentId: 'pay_test_seed_1',
+    razorpayOrderId: 'order_test_seed_1',
+    email: 'testuser+clerk_test@example.com',
+    items: [{ productId: 'prod1', name: 'Wireless Headphones', price: 249900, qty: 2, image: '/uploads/headphones.jpg' }],
+    address: {
+      fullName: 'Jane Doe',
+      street: '221B Baker Street',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      zipCode: '400001',
+      country: 'India',
+    },
+    createdAt: '2026-07-22T18:18:05.000Z',
+    updatedAt: '2026-07-22T18:18:05.000Z',
   })
 }

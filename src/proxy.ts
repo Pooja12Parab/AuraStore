@@ -1,4 +1,4 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+﻿import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
 const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_API_URL || 'http://localhost:1337'
@@ -6,7 +6,8 @@ const STRAPI_TOKEN = process.env.STRAPI_API_TOKEN
 
 const isProtectedRoute = createRouteMatcher([
   '/orders(.*)',
-  '/checkout(.*)',
+  '/checkout',
+  '/checkout/(.*)',
   '/account(.*)',
 ])
 

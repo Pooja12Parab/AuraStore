@@ -115,7 +115,7 @@ This Low-Level Design defines the **how** (component-level design, interface con
 
 - **Phase 1 is complete and green** — Next.js 16 frontend running, Strapi v5 with seeded+published Products/Categories, Clerk `+clerk_test` user working.
 - **Razorpay Test Mode account** exists; `rzp_test_` keys, webhook secret, and webhook URL are configured (per [Prerequisites](./AuraStore_Prerequisites_Phase2.md)).
-- **Product prices** continue to be whole INR rupees (no paise). Razorpay amounts use the **same whole-rupee value** (`amount` in rupees, NOT paise).
+- **Product prices** continue to be whole INR rupees (no paise). `Order.total` is stored in whole INR rupees. **At the Razorpay API boundary** (`createRazorpayOrder`), the amount is converted to **paise** (×100) per Razorpay's contract. Min: ₹1.00 (100 paise); max: per Razorpay limits (currently ₹15,00,000 i.e. 15,00,00,000 paise per order — well above any cart total we expect).
 - **Cart identity** is by `productId` (Strapi `documentId`). Adding the same product twice increments quantity (no duplicate line items).
 - **One cart per browser**, not per user. The cart lives in `localStorage`; signed-in vs signed-out users see the same cart contents until they check out (where the server-side order is keyed by `clerkUserId`).
 - **No stock reservation.** Inventory is not in scope (Phase 3 may revisit). Orders can be placed regardless of stock value.
@@ -263,10 +263,26 @@ export function getRazorpay(): Razorpay {
 }
 
 export async function createRazorpayOrder(args: {
-  amount: number;      // whole INR rupees
+  /** Razorpay amount in **paise** (smallest subunit), not whole rupees.
+   *  To charge ₹249,900 pass `24990000`. Minimum: `100` (₹1.00). */
+  amount: number;
   currency: "INR";
-  receipt: string;     // <64 chars; we use crypto.randomUUID()
-}): Promise<{ id: string; amount: number; currency: string }> { /* ... */ }
+  /** Razorpay receipt field — max **40 characters**. We use the Strapi
+   *  `Order.documentId` as the receipt (the Strapi doc id is alphanumeric,
+   *  ≤25 chars) so the Razorpay order id and Strapi order are bidirectionally
+   *  mappable. */
+  receipt: string;
+}): Promise<{
+  id: string;
+  amount: number;          // paise — echoed by Razorpay
+  amount_paid: number;     // 0 until captured
+  amount_due: number;
+  currency: "INR";
+  receipt: string;
+  status: "created" | "attempted" | "paid";
+  attempts: number;
+  created_at: number;      // unix seconds
+}> { /* ... */ }
 ```
 
 #### 4.2.3 Server-side order helpers — `src/lib/orders.ts`
@@ -286,7 +302,7 @@ export type CheckoutInput = {
 };
 
 export type CreateOrderResult =
-  | { ok: true; razorpayOrderId: string; amount: number; currency: "INR"; orderDocumentId: string }
+  | { ok: true; razorpayOrderId: string; amountInr: number; amountPaise: number; currency: "INR"; orderDocumentId: string }
   | { ok: false; error: string };
 
 export async function createOrderForCheckout(
@@ -298,16 +314,21 @@ export async function getOrdersForUser(clerkUserId: string): Promise<Order[]>;  
 export async function getOrderByDocumentId(clerkUserId: string, documentId: string): Promise<Order | null>;
 export async function markOrderPaid(razorpayOrderId: string, paymentId: string): Promise<void>;
 export async function markOrderFailed(razorpayOrderId: string, reason: string): Promise<void>;
+
+/** Pure helper, used by both server and unit tests. */
+export function computeOrderTotalInr(items: Array<{ price: number; quantity: number }>): number;
+export function rupeesToPaise(rupees: number): number;
 ```
 
 **`createOrderForCheckout` contract:**
 1. **Validate** `CheckoutInput` with Zod.
 2. **Fetch** each product from Strapi by **`documentId`** via `GET /api/products/:documentId?fields[0]=price&fields[1]=name&fields[2]=slug&populate[images][fields][0]=url`. Collect `{name, price, image}`. If any `productId` is unknown (404), return `{ ok: false, error: "Unknown product: <id>" }`.
-3. **Compute** `amount = Σ(price × quantity)`. **Never trust the client's total.**
-4. **Create** the Strapi `Order` via `POST /api/orders` with `Authorization: Bearer ${STRAPI_API_TOKEN_WRITE}` (the new write-scoped token), body `{ data: { clerkUserId, items, address, total, email, status: "pending" } }`. The server returns the created `documentId`.
-5. **Create** the Razorpay order with `amount`, `currency: "INR"`, `receipt = <order documentId>`.
-6. **Update** the Strapi order via `PUT /api/orders/:documentId` with `data: { razorpayOrderId }`.
-7. Return `{ ok: true, razorpayOrderId, amount, currency, orderDocumentId }`.
+3. **Compute** `totalInr = Σ(price × quantity)` in whole INR rupees. **Never trust the client's total.** Store `total: totalInr` in Strapi.
+4. **Create** the Strapi `Order` via `POST /api/orders` with `Authorization: Bearer ${STRAPI_API_TOKEN_WRITE}` (the new write-scoped token), body `{ data: { clerkUserId, items, address, total: totalInr, email, status: "pending" } }`. The server returns the created `documentId`.
+5. **Compute** the Razorpay amount in paise: `amountPaise = totalInr * 100` (whole-rupee prices → paise by ×100). **Critical:** Razorpay's `amount` field is in **paise** (the smallest INR subunit), NOT whole rupees — per official Razorpay API docs ("Payment amount in the smallest currency sub-unit. For example, if the amount to be charged is ₹299, then pass `29900` in this field."). Minimum allowed: `100` (₹1.00).
+6. **Create** the Razorpay order with `amount: amountPaise`, `currency: "INR"`, `receipt: orderDocumentId` (the Strapi doc id; max 40 chars, doc ids are alphanumeric and ≤25 chars). The Razorpay response is `{ id: <order_…>, amount: amountPaise, ... }` (Razorpay echoes amount in paise).
+7. **Update** the Strapi order via `PUT /api/orders/:documentId` with `data: { razorpayOrderId }`.
+8. Return `{ ok: true, razorpayOrderId, amountInr: totalInr, amountPaise, currency: "INR", orderDocumentId }`.
 
 #### 4.2.4 Client hooks — `src/hooks/useCart.ts` (re-export), `useAddToCart.ts`, `useRemoveFromCart.ts`, `useUpdateQuantity.ts`
 
@@ -409,19 +430,19 @@ Submit button disabled while `isSubmitting` or cart empty.
 #### 4.2.10 `/checkout/confirmation` — `src/app/checkout/confirmation/page.tsx`
 
 Server Component:
-- Reads `?order_id=<documentId>`.
+- Signature: `async function ConfirmationPage({ searchParams }: { searchParams: Promise<{ order_id?: string; cleared?: string }> }) { const { userId } = await auth(); if (!userId) redirect("/sign-in"); const { order_id, cleared } = await searchParams; if (!order_id) notFound(); const order = await getOrderByDocumentId(userId, order_id); if (!order) notFound(); /* ... */ }`. **Next.js 16: `searchParams` is `Promise<...>` — must be `await`-ed.**
 - Calls `getOrderByDocumentId(userId, documentId)`.
 - If `status === "paid"` → renders `<OrderConfirmation order={...} />`.
-- If `status === "pending"` → renders a "Payment is processing" message with a refresh hint (covers the webhook-not-yet-arrived window).
+- If `status === "pending"` → renders a "Payment is processing" message with a refresh hint (covers the webhook-not-yet-arrived window). `PaymentProcessing` is a tiny Client Component that calls `router.refresh()` every 3 s up to 10 attempts before showing a manual "Refresh" button.
 - If `status === "failed"` → renders an error with a "Retry checkout" link.
-- **Clears the cart** server-side via a redirect flag (the client `useCart().clear()` runs on confirmation mount when `?cleared=1` is present).
+- **Cart clear** is **NOT** done in the Server Component (server has no access to client `localStorage`). Instead, the page renders a small `<ClearCartOnMount shouldClear={cleared === "1"} />` Client Component that calls `cartStore.clear()` once on mount when `shouldClear` is true. `RazorpayCheckout.tsx`'s `handler` navigates with `?cleared=1` so this works only after a successful Razorpay callback.
 
-> **Important:** the page must NOT block on the webhook. The user's experience is: pay → confirmation page → server polls/reads Strapi. Most of the time the webhook arrives within ~2s; if not, the "processing" message stays until refresh.
+> **Important:** the page must NOT block on the webhook. The user's experience is: pay → confirmation page → server reads Strapi. Most of the time the webhook arrives within ~2s; if not, the "processing" message stays until manual refresh.
 
 #### 4.2.11 `/orders` and `/orders/[documentId]`
 
 - `/orders`: Server Component, `auth().userId` required (proxy + `auth.protect()`); calls `getOrdersForUser(userId)`; renders `<OrderHistoryPage orders={...} />`. Empty state: "You have no orders yet" with CTA to `/products`.
-- `/orders/[documentId]`: Server Component; calls `getOrderByDocumentId(userId, documentId)`; if null → `notFound()`. Renders `<OrderDetail order={...} />` (items, totals, shipping address, payment status).
+- `/orders/[documentId]`: Server Component; signature is `async function OrderDetailPage({ params }: { params: Promise<{ documentId: string }> }) { const { userId } = await auth(); if (!userId) redirect(...); const { documentId } = await params; const order = await getOrderByDocumentId(userId, documentId); if (!order) notFound(); return <OrderDetail order={...} />; }`. Renders `<OrderDetail order={...} />` (items, totals, shipping address, payment status). **Next.js 16 requires `params` to be a `Promise` and `await`-ed** — the sync form (`{ params }: { params: { documentId: string } }`) fails Next 16 typecheck with `params should be awaited before using its properties`. Same shape applies to `/checkout/confirmation/page.tsx` where `searchParams` is the async analog.
 
 #### 4.2.12 API routes
 
@@ -485,6 +506,8 @@ Added to the existing Strapi v5 project (Phase 1). Field model per [HLD §7.1 Or
 **Why these decisions (Strapi v5 specifics):**
 
 - **`draftAndPublish: false`** — Strapi v5 enables Draft & Publish by default for new content types. Orders are **immutable facts** (an order is either pending, paid, or failed — never "draft editorial content"). Leaving D&P on would cause silent failures: every new order created via `POST /api/orders` would land as a draft with `publishedAt: null` and would be invisible to default `GET /api/orders` queries. This is the single largest Strapi-correctness issue in the original Phase 1→Phase 2 seam.
+
+- **`draftAndPublish: false` AND the user-defined `status` field are mutually consistent** — per Strapi v5 docs, when D&P is enabled, the attribute name `status` is **reserved** by Strapi and the Content-Type Builder blocks creating a user attribute named `status`. We rely on `draftAndPublish: false` to free up the name. **If anyone flips `draftAndPublish` to `true` on `Order` later, the schema build will fail with a reserved-name error** — and the fix is to rename the field (e.g. `orderStatus`) and update all server code, MSW handlers, and tests. This is why `draftAndPublish` is a load-bearing decision and is locked to `false` here.
 - **`enumeration` field shape** is Strapi v5's strict format. The HLD-style shorthand (`"enum": [...]` at the field level) is rejected.
 - **`razorpayOrderId` is `unique: true`** — Razorpay order IDs are globally unique and the field is the webhook's idempotency key. A `unique` constraint is a belt-and-suspenders safety net alongside the `markOrderPaid` no-op-on-already-paid guard.
 - **`items` and `address` are `json`** — these are inline JSON values in Strapi v5. They are **not** relations, **do not** appear in `populate`, and **are not** affected by cascading deletes. This matches the HLD's snapshot-consistency intent.
@@ -577,7 +600,8 @@ User ─── /orders ──▶ proxy.ts → auth.userId present
             Server Component
                 │
                 ├─ getOrdersForUser(userId)
-                │     └─ Strapi: GET /api/orders?filters[clerkUserId][$eq]=…&sort=createdAt:desc&populate=*
+                │     └─ Strapi: GET /api/orders?filters[clerkUserId][$eq]=…&sort[0]=createdAt:desc
+                │        (no populate — items/address are JSON, returned inline)
                 │
                 ▼
             <OrderHistoryPage orders={...} />
@@ -616,7 +640,7 @@ Cookie: __session=<clerk session cookie>   // required
 
 | Status | Body | Meaning |
 |--------|------|---------|
-| 200 | `{ "order_id": "order_Nxq8m7K3", "amount": 499800, "currency": "INR", "orderDocumentId": "ord_abc123" }` | Success; open Razorpay modal |
+| 200 | `{ "order_id": "order_Nxq8m7K3", "amount": 49980000, "currency": "INR", "orderDocumentId": "ord_abc123" }` | Success; open Razorpay modal. **`amount` is in paise** (49980000 = 2 × ₹2,49,900 × 100). |
 | 400 | `{ "error": "Invalid input", "details": "<zod issues>" }` | Validation failed |
 | 401 | `{ "error": "Unauthorized" }` | No Clerk session |
 | 500 | `{ "error": "Failed to create order", "details": "…" }` | Strapi or Razorpay outage |
@@ -696,6 +720,7 @@ Stored idempotency key: `Order.razorpayOrderId` (unique enough in practice; comb
 | `/api/orders/create` | Unauthenticated | 401 |
 | `/api/orders/create` | Bad input | 400 + zod details |
 | `/api/orders/create` | Unknown productId | 400 + "Unknown product: <id>" |
+| `/api/orders/create` | `totalInr × 100 < 100` | 400 + "Order amount too small (Razorpay minimum: ₹1.00 = 100 paise)" |
 | `/api/orders/create` | Razorpay 4xx/5xx | 500 + log full error server-side; client shows toast "Payment service unavailable, try again" |
 | `/api/orders/create` | Strapi 4xx/5xx | 500 + log |
 | `/api/webhooks/razorpay` | Invalid signature | 400 (no log of secret) |
@@ -811,7 +836,7 @@ See [Testing LLD Phase 2](./AuraStore_Testing_LLD_Phase2.md) for full spec. Summ
 | Q2 | **Test card vs real failure card.** E2E only covers the success path with `4111 1111 1111 1111`. | Dev | Add a separate Playwright spec using `4000 0000 0000 0002` and assert the failure toast + redirect back to `/checkout`. |
 | Q3 | **Order confirmation race.** The user may arrive at `/checkout/confirmation` before the webhook fires. | Dev | Confirmation page renders "Payment processing…" when `status === "pending"`; auto-refreshes every 3 s for up to 30 s, then shows a manual "Refresh" button. |
 | Q4 | **Cart-merge on sign-in.** Anonymous cart vs authenticated cart — Phase 2 keeps a single browser cart. | Dev | Document behavior in `/checkout` empty state and tooltip on cart icon ("Cart is saved in this browser"). |
-| Q5 | **`STRAPI_API_TOKEN` scope.** Phase 1 token is read-only on `Product`+`Category`. Phase 2 needs read+write+update on `Order`. | Dev | **Locked (see §4.2.13):** keep Phase 1 `STRAPI_API_TOKEN` as-is (read-only) and create a **new** API token `Order writer` with `Write`+`Update` scopes on `Order` only → store as `STRAPI_API_TOKEN_WRITE`. Strapi v5 cannot mutate the scopes of an existing token via the Admin API; a new token is the only path. |
+| Q5 | ~~STRAPI_API_TOKEN scope.~~ **RESOLVED** (see [§4.2.13](#422-13-strapi-order-content-type)). Phase 1 `STRAPI_API_TOKEN` stays read-only on `Product`+`Category`; a new token `Order writer` (`Read`+`Write`+`Update` on `Order` only) is stored as `STRAPI_API_TOKEN_WRITE`. | n/a | none |
 | Q6 | **Razorpay Checkout.js in iframe sandboxes.** Should be fine on standard e-commerce sites; we do not embed AuraStore in an iframe. | Dev | None — but note for future embed use cases. |
 | Q7 | **Phase 3 will add `framer-motion`** to animate the drawer. Phase 2 must NOT introduce a competing animation lib. | Dev | Strict dependency lock; Phase 2 ships a non-animated drawer. |
 | Q8 | **Zod v3 vs v4.** Strapi already pulls zod v3 transitively; we pin `zod@^3` for the API route. | Dev | Lockfile check in Stage 1. |

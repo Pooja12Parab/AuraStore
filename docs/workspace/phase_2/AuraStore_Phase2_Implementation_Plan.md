@@ -2,13 +2,20 @@
 
 > **Project:** AuraStore: The Modern Consumer App
 > **Version:** 1.0
-> **Date:** July 21, 2026
+> **Date:** July 22, 2026 (refined; originally drafted July 21, 2026)
 > **Document Type:** Implementation Plan (staged, execution-ready) — **AGENT execution plan**
 > **Parent Documents:** [Phase 2 LLD](./AuraStore_LLD_Phase2.md) · [Phase 2 Testing LLD](./AuraStore_Testing_LLD_Phase2.md) · [Testing HLD](../AuraStore_Testing_HLD.md) · [Prerequisites](./AuraStore_Prerequisites_Phase2.md) · [HLD](../AuraStore_HLD.md) · [Phase 1 Implementation Plan](./AuraStore_Phase1_Implementation_Plan.md)
 > **Phase:** Phase 2 — Mandatory (Shopping cart, Razorpay checkout, order management)
 > **Audience:** Implementing developer / agent
 
 > **Role legend:** Each stage tags its **Entry Gate** as the **HUMAN handoff** (from Prerequisites) and its **Code/Implementation** as **AGENT** work. The Prerequisites doc holds the full HUMAN/EXTERNAL-tagged reference (Razorpay account/keys/webhook; tunnel; secrets).
+>
+> **Operational helpers** (added July 22, 2026): every step that needs Strapi up, env-file composition, or issuing the `Order writer` API token references the three PowerShell 5.1 scripts under `scripts/` rather than re-deriving the commands inline:
+> - `scripts/strapi-start.ps1` — idempotent Strapi v5 dev-server bringup on `:1337` (exits 0 if already up).
+> - `scripts/strapi-issue-order-token.ps1` — admin login + `POST /admin/api-tokens` for `Order writer` (idempotent; requires the `Order` content type to exist first).
+> - `scripts/strapi-write-env-local.ps1` — composes `.env.local` from `.env` / `backend/.env` / optional Razorpay file.
+>
+> These scripts solve the Phase-1 era's repeated "is Strapi up / what creds / what URL" failures and the PowerShell 5.1 `curl`/`&` gotchas by capturing them in one PowerShell-explicit place.
 
 ---
 
@@ -99,16 +106,26 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
 
 ### Setup (AGENT)
 
-- [ ] **Step 1.1: Install Phase 2 npm deps** (root + dev, single command):
+- [ ] **Step 1.1: Install Phase 2 deps via `pnpm` (matches Phase 1 plan + README + pnpm-lock.yaml)**:
   ```bash
-  npm i sonner@^1 react-hook-form@^7 @hookform/resolvers@^3 zod@^3 razorpay
+  pnpm add sonner@^1 react-hook-form@^7 @hookform/resolvers@^3 zod@^3 razorpay
   ```
-  Verify `package.json`:
+  Verify `package.json` includes the new entries under `dependencies`:
   ```json
   {
-    "dependencies": { "sonner": "^1...", "react-hook-form": "^7...", "@hookform/resolvers": "^3...", "zod": "^3...", "razorpay": "latest" }
+    "dependencies": { "sonner": "^1...", "react-hook-form": "^7...", "@hookform/resolvers": "^3...", "zod": "^3...", "razorpay": "^2..." }
   }
   ```
+  Honor Phase 1 NFR rationale: pnpm's content-addressable store keeps install fast and disk-efficient across all workspaces.
+
+  > **Frontend vs backend PM note:** the **frontend** (repo root) uses **pnpm** per Phase 1 / README; the **backend** (`backend/`) uses **npm** (it carries its own `package-lock.json`). The plan's `pnpm ...` commands below target the frontend; the `npm run ...` commands in Steps 1.2a and 1.3 target `backend/`. Don't migrate them.
+  **Verify .env.local exists but is gitignored** — `backend/.env` is already in `backend/.gitignore`; on the frontend side, `.env.local` and `.env*.local` are in the Next.js default `.gitignore`. No edits required unless the prior session left stray files in the repo root.
+
+- [ ] **Step 1.1a: Verify `.gitignore` covers Phase 2 scratch.** Most hygiene entries are already in `.gitignore` from earlier sessions (`.tmp/`, `tmp-*.log`, `.clerk/`, `login.json`, etc.). **Add if missing** (per memory `aurastore.gitignore_noncommittables`):
+  - `scripts/upload-product-images.mts`
+  - `scripts/apply-seed-data.mts`
+  - `backend/scripts/assets/*.jpg`
+  - Run `git status` and confirm none of the above appear in the untracked list.
 
 - [ ] **Step 1.2: Strapi — create `Order` content type** (in `backend/`):
   - **1.2a.** Create the four boilerplate files (matches the existing `product` content type pattern in `backend/src/api/product/`):
@@ -121,18 +138,26 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
     - Settings → Roles → Public → Order → uncheck all 6 actions (`find`, `findOne`, `create`, `update`, `delete`, `publish`).
     - Settings → Roles → Authenticated → Order → uncheck all 6 actions.
     - **Why both:** Clerk users do **not** authenticate to Strapi. Strapi's REST API treats no-auth requests as Public and JWT-authenticated requests as Authenticated. Leave both unchecked so neither path returns orders.
-  - **1.2c. Issue a second API token (`STRAPI_API_TOKEN_WRITE`).** Strapi v5 cannot mutate existing tokens; you must create a new one.
-    - Settings → API Tokens → **Create new API Token**.
-    - **Name:** `Order writer`. **Type:** `Custom`. **Description:** `Phase 2: order create/update from Next.js server.`.
-    - **Duration:** `Unlimited` (Phase 2 dev/local only; rotate for prod).
-    - **Section: `Order`** → check **`Read`**, **`Write`**, **`Update`**. Leave `Delete` and `Publish` unchecked. (Order is `draftAndPublish: false`, so `Publish` is moot; leaving unchecked is correct.)
-    - **Sections `Product` and `Category`** → all unchecked (this token must not touch catalog data).
-    - Save → copy the token immediately (shown once) → `STRAPI_API_TOKEN_WRITE` in `.env.local`.
-    - **Verify:** `curl -H "Authorization: Bearer $STRAPI_API_TOKEN_WRITE" "http://localhost:1337/api/orders"` → `{"data":[],"meta":{"pagination":{"total":0}}}`. `curl -H "Authorization: Bearer $STRAPI_API_TOKEN_WRITE" "http://localhost:1337/api/products"` → **`403 Forbidden`** (intentional — token has no scope on `Product`).
+  - **1.2c. Issue a second API token (`STRAPI_API_TOKEN_WRITE`).** Strapi v5 cannot mutate existing tokens; you must create a new one. **Use the helper script** (env vars come from `.env.local` or `backend/.env`):
+    ```powershell
+    # Strapi must be running (Stage 1 typically already has it up from the bring-up step).
+    # If not: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/strapi-start.ps1
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts\strapi-issue-order-token.ps1
+    ```
+    The script:
+    - Logs in as `STRAPI_ADMIN_EMAIL`/`STRAPI_ADMIN_PASSWORD` and gets an admin JWT.
+    - Lists existing tokens; if `Order writer` already exists, prints the existing accessKey and exits 0.
+    - Otherwise POSTs to `/admin/api-tokens` with the locked Phase 2 scope (`Read`+`Write`+`Update` on `Order` only).
+    - **Prerequisite:** the `Order` content type must already exist (this is why Step 1.2a runs first and Step 1.2b's role disable + Steps 1.3's seed are independent of the token).
+    - **Important:** `STRAPI_ADMIN_EMAIL` and `STRAPI_ADMIN_PASSWORD` must be present in `.env.local` (preferred) or `backend/.env`. `scripts/strapi-write-env-local.ps1` populates them automatically from `backend/.env` if you haven't done it manually:
+      ```powershell
+      powershell -NoProfile -ExecutionPolicy Bypass -File scripts\strapi-write-env-local.ps1
+      ```
+    - **Output:** the script prints a paste-ready line like `STRAPI_API_TOKEN_WRITE=<accessKey>`. Re-run `scripts\strapi-write-env-local.ps1 -AddOrderToken` to have it appended to `.env.local` automatically. **Verify:** `curl -H "Authorization: Bearer $(Select-String -Path .env.local -Pattern '^STRAPI_API_TOKEN_WRITE=' | ForEach-Object { ($_ -split '=',2)[1] })" http://localhost:1337/api/orders` → 200 with `{"data":[],"meta":{"pagination":{"total":0}}}`. `curl -H "Authorization: Bearer $STRAPI_API_TOKEN_WRITE" http://localhost:1337/api/products` → **`403 Forbidden`** (token has no scope on `Product`).
 - [ ] **Step 1.3: Strapi seed for `Order` orders** — create `backend/scripts/seed-orders.ts` (per [Testing LLD §8.1](./AuraStore_Testing_LLD_Phase2.md)):
   - **Pattern: same as the existing `seed.ts`** — use the in-process Strapi Document Service API (`createStrapi().load()` + `documents('api::order.order').create({ data, status: 'published' })`). Do NOT use the REST API for seeding — the REST API needs an admin JWT, not the API token.
   - **Idempotency:** on startup, find existing orders with `clerkUserId === "user_test_123"` and delete them (or skip insert). The script may be re-run safely.
-  - Inserts two orders: **`ord_paid_1`** (`status: "paid"`, `paymentId: "pay_test_seed_1"`, `razorpayOrderId: "order_test_seed_1"`, `total: 499800`, two Wireless Headphones) and **`ord_pending_1`** (`status: "pending"`, no payment id, `razorpayOrderId: "order_test_seed_pending_1"`, `total: 99900`, one Water Bottle). Item shapes match `Order.items` JSON: `[{ productId: "<product-documentId>", name, price, qty, image }]` — use real `documentId`s from the Phase 1 seed by looking them up at seed-time via `documents('api::product.product').findFirst({ filters: { slug: 'wireless-headphones' } })`.
+  - Inserts two orders: **`ord_paid_1`** (`status: "paid"`, `paymentId: "pay_test_seed_1"`, `razorpayOrderId: "order_test_seed_1"`, `total: 499800` — **whole INR rupees**, two Wireless Headphones) and **`ord_pending_1`** (`status: "pending"`, no payment id, `razorpayOrderId: "order_test_seed_pending_1"`, `total: 99900`, one Water Bottle). Item shapes match `Order.items` JSON: `[{ productId: "<product-documentId>", name, price, qty, image }]` — use real `documentId`s from the Phase 1 seed by looking them up at seed-time via `documents('api::product.product').findFirst({ filters: { slug: 'wireless-headphones' } })`.
   - Add npm script in `backend/package.json` (different name from Phase 1's `"seed"` to avoid collision):
     ```json
     "scripts": {
@@ -192,29 +217,29 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
 
 - [ ] **Step 1.9: Write `tests/unit/cart.test.ts`** (8 tests per [Testing LLD §5.1](./AuraStore_Testing_LLD_Phase2.md)):
   - Empty, add-new, add-increment, set0-removes, setN-updates, remove, totalQuantity, subtotal.
-  - Run: `npx vitest run tests/unit/cart.test.ts` → all 8 PASS.
+  - Run: `pnpm vitest run tests/unit/cart.test.ts` → all 8 PASS.
 
 - [ ] **Step 1.10: Write `tests/unit/CartIconButton.test.tsx`** (2 tests per [Testing LLD §5.6](./AuraStore_Testing_LLD_Phase2.md)):
   - Empty: no badge; non-empty: shows total.
-  - Run: `npx vitest run tests/unit/CartIconButton.test.tsx` → PASS.
+  - Run: `pnpm vitest run tests/unit/CartIconButton.test.tsx` → PASS.
 
 - [ ] **Step 1.11: Write `tests/unit/useAddToCart.test.ts`** (2 tests per [Testing LLD §5.4](./AuraStore_Testing_LLD_Phase2.md)):
   - Success path: toast + cart; qty 0: no-op.
-  - Run: `npx vitest run tests/unit/useAddToCart.test.ts` → PASS.
+  - Run: `pnpm vitest run tests/unit/useAddToCart.test.ts` → PASS.
 
 ### Verification (exit criteria)
 
 - [ ] `cd backend && npm run seed && npm run seed:orders` both return 0; the orders `curl` returns `{"data":[{...,"documentId":"ord_paid_1",...},{...,"documentId":"ord_pending_1",...}],"meta":{"pagination":{"total":2}}}`.
 - [ ] `curl -H "Authorization: Bearer $STRAPI_API_TOKEN" "http://localhost:1337/api/orders"` → **`403 Forbidden`** (the Phase 1 read-only token must NOT see orders — proves least-privilege token separation works).
-- [ ] `npx tsc --noEmit` clean.
-- [ ] `npx vitest run tests/unit/cart.test.ts tests/unit/CartIconButton.test.tsx tests/unit/useAddToCart.test.ts` → all PASS (10 new tests).
-- [ ] Full Phase 1 green bar still PASSES (re-run `npm run test`).
+- [ ] `pnpm exec tsc --noEmit` clean.
+- [ ] `pnpm vitest run tests/unit/cart.test.ts tests/unit/CartIconButton.test.tsx tests/unit/useAddToCart.test.ts` → all PASS (10 new tests).
+- [ ] Full Phase 1 green bar still PASSES (re-run `pnpm test`).
 
 ### Commit
 
 - [ ] **Step 1.12: Commit**
   ```bash
-  git add backend/src/api/order backend/scripts/seed-orders.ts package.json package-lock.json \
+          git add backend/src/api/order backend/scripts/seed-orders.ts package.json pnpm-lock.yaml \
           src/app/layout.tsx src/lib/cart.ts src/lib/cart-ui.ts \
           tests/setup/sonner.ts tests/setup/next-headers.ts tests/setup/razorpay-checkout.ts \
           tests/msw/handlers/orders.ts tests/msw/factories/order.ts \
@@ -237,12 +262,20 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
   - `getRazorpay()` lazy-singleton (reuses the same instance across calls in the same Node process).
   - `createRazorpayOrder({ amount, currency, receipt })` calls `rzp.orders.create(...)`.
 
-- [ ] **Step 2.2: Create `src/lib/order-total.ts`** (pure helper, used by both server and tests):
+- [ ] **Step 2.2: Create pure helpers in `src/lib/orders.ts`** (used by both server and tests):
   ```ts
-  export function computeOrderTotal(items: Array<{ price: number; quantity: number }>): number {
+  /** Sum price×qty across items. Whole INR rupees; storage canonical form for `Order.total`. */
+  export function computeOrderTotalInr(items: Array<{ price: number; quantity: number }>): number {
     return items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   }
+
+  /** Convert whole INR rupees to paise for the Razorpay `amount` field. */
+  export function rupeesToPaise(rupees: number): number {
+    // Razorpay requires integer paise; prices are whole rupees so ×100 is exact.
+    return rupees * 100;
+  }
   ```
+  > **Note:** helpers live in `src/lib/orders.ts` (not a separate `order-total.ts`) so they're testable in the same module test as `createOrderForCheckout` and reach the same Zod-typed `Order` shape.
 
 - [ ] **Step 2.3: Create `src/lib/razorpay-webhook.ts`** (pure helper for HMAC verification):
   ```ts
@@ -263,16 +296,17 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
   - Zod schemas for `CheckoutInput`.
   - `createOrderForCheckout(clerkUserId, input)`:
     1. Zod parse (re-validate even though the API route did).
-    2. For each `productId`: `GET /api/products/:documentId?fields[0]=price&fields[1]=name&populate[images]=*` from Strapi. If any 404 → `{ ok: false, error: "Unknown product: <id>" }`.
-    3. Compute `amount = Σ(price × quantity)`.
-    4. `POST /api/orders` to Strapi with `status: "pending"`, `items` JSON, `address` JSON, `total`, `email`, `clerkUserId`.
-    5. `createRazorpayOrder({ amount, currency: "INR", receipt: orderDocumentId })`.
-    6. `PUT /api/orders/:documentId` with `{ razorpayOrderId }`.
-    7. Return `{ ok: true, razorpayOrderId, amount, currency, orderDocumentId }`.
-  - `getOrdersForUser(clerkUserId)` — `GET /api/orders?filters[clerkUserId][$eq]=<id>&sort[0]=createdAt:desc&populate=*` (use `populate=*` only on the dev-verification path; in app code, use `populate` of just `items` and `address` which are JSON fields requiring no populate). **Implementation note:** `items` and `address` are JSON fields on the Order schema (not relations), so no `populate` is needed. The query is just `?filters[clerkUserId][$eq]=…&sort[0]=createdAt:desc`.
+    2. For each `productId`: `GET /api/products/:documentId?fields[0]=price&fields[1]=name&fields[2]=slug&populate[images][fields][0]=url` from Strapi. If any 404 → `{ ok: false, error: "Unknown product: <id>" }`.
+    3. Compute `totalInr = Σ(price × quantity)` in whole INR rupees. **Never trust the client's total.**
+    4. `POST /api/orders` to Strapi via `STRAPI_API_TOKEN_WRITE`, body `{ data: { status: "pending", items, address, total: totalInr, email, clerkUserId } }`. Returns `documentId`.
+    5. **Convert to paise:** `amountPaise = totalInr * 100`. Razorpay's `amount` field is in paise (sub-units), per Razorpay API docs.
+    6. `createRazorpayOrder({ amount: amountPaise, currency: "INR", receipt: orderDocumentId })`. Receipt max 40 chars; Strapi doc ids are alphanumeric ≤25 chars so they always fit.
+    7. `PUT /api/orders?filters[razorpayOrderId][$eq]=<order_id>` with `{ data: { status: "pending", razorpayOrderId } }` — actually, `razorpayOrderId` is set as soon as Razorpay returns. **Decision:** skip this second PUT; store `razorpayOrderId` on initial create by updating once `createRazorpayOrder` returns: `PUT /api/orders/:documentId` with `{ data: { razorpayOrderId } }`. Either order is fine; the final return value is the same. **Lock:** the LLD does the second PUT (Section 4.2.13 step 7). Match the LLD exactly.
+    8. Return `{ ok: true, razorpayOrderId, amountInr: totalInr, amountPaise, currency: "INR", orderDocumentId }`.
+  - `getOrdersForUser(clerkUserId)` — `GET /api/orders?filters[clerkUserId][$eq]=<id>&sort[0]=createdAt:desc`. **No `populate`** — `items` and `address` are JSON fields returned inline; `populate=*` is forbidden in app code.
   - `getOrderByDocumentId(clerkUserId, documentId)` — same query but with `filters[documentId][$eq]=<id>`; return `null` if `order.clerkUserId !== clerkUserId`.
-  - `markOrderPaid(razorpayOrderId, paymentId)` — `PUT /api/orders?filters[razorpayOrderId][$eq]=<id>` with `{ status: "paid", paymentId }`. **Idempotency:** if the order is already `paid`, no-op (return without throwing).
-  - `markOrderFailed(razorpayOrderId, reason)` — same, status `failed`, error in `paymentId` field or a new `failureReason` field if desired (out of MVP — log only).
+  - `markOrderPaid(razorpayOrderId, paymentId)` — `PUT /api/orders?filters[razorpayOrderId][$eq]=<id>` with `{ data: { status: "paid", paymentId } }`. **Idempotency:** if the order is already `paid`, no-op (return without throwing). Backed by the unique constraint on `razorpayOrderId`.
+  - `markOrderFailed(razorpayOrderId, reason)` — same with `status: "failed"`. Reason is logged only (out of MVP for storing).
 
 - [ ] **Step 2.5: Create `src/app/api/orders/create/route.ts`** per [LLD §4.2.12](./AuraStore_LLD_Phase2.md#42212-api-routes):
   ```ts
@@ -307,7 +341,14 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
     try {
       const result = await createOrderForCheckout(userId, parsed.data);
       if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
-      return NextResponse.json({ order_id: result.razorpayOrderId, amount: result.amount, currency: result.currency, orderDocumentId: result.orderDocumentId });
+      // Razorpay requires amount in paise; client uses the same value for the modal.
+      return NextResponse.json({
+        order_id: result.razorpayOrderId,
+        amount: result.amountPaise,           // paise (e.g. 49980000 = 2 × ₹2,49,900)
+        amountInr: result.amountInr,           // rupees (e.g. 499800 = ₹4,99,800) — informational
+        currency: result.currency,             // "INR"
+        orderDocumentId: result.orderDocumentId,
+      });
     } catch (err) {
       console.error("[orders/create] failed", { userId, err });
       return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
@@ -356,23 +397,23 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
 
 - [ ] **Step 2.7: Write `tests/unit/verifyRazorpaySignature.test.ts`** (2 tests per [Testing LLD §5.2](./AuraStore_Testing_LLD_Phase2.md)):
   - Valid sig → true; tampered sig → false.
-  - Run: `npx vitest run tests/unit/verifyRazorpaySignature.test.ts` → PASS.
+  - Run: `pnpm vitest run tests/unit/verifyRazorpaySignature.test.ts` → PASS.
 
 - [ ] **Step 2.8: Write `tests/unit/order-total.test.ts`** (2 tests per [Testing LLD §5.5](./AuraStore_Testing_LLD_Phase2.md)):
-  - Run: `npx vitest run tests/unit/order-total.test.ts` → PASS.
+  - Run: `pnpm vitest run tests/unit/order-total.test.ts` → PASS.
 
 - [ ] **Step 2.9: Write `tests/integration/orders-create.test.ts`** (6 tests per [Testing LLD §6.1](./AuraStore_Testing_LLD_Phase2.md)):
   - Use `vi.mock("razorpay")` for the SDK; mock `@clerk/nextjs/server` per test.
-  - Run: `npx vitest run tests/integration/orders-create.test.ts` → all PASS.
+  - Run: `pnpm vitest run tests/integration/orders-create.test.ts` → all PASS.
 
 - [ ] **Step 2.10: Write `tests/integration/razorpay-webhook.test.ts`** (6 tests per [Testing LLD §6.2](./AuraStore_Testing_LLD_Phase2.md)):
   - Hand-craft raw payloads; sign with `crypto.createHmac` using `process.env.RAZORPAY_WEBHOOK_SECRET`.
   - Set `process.env.RAZORPAY_WEBHOOK_SECRET = "whsec_test"` in the test setup.
-  - Run: `npx vitest run tests/integration/razorpay-webhook.test.ts` → all PASS.
+  - Run: `pnpm vitest run tests/integration/razorpay-webhook.test.ts` → all PASS.
 
 ### Verification
 
-- [ ] `npx tsc --noEmit` clean.
+- [ ] `pnpm exec tsc --noEmit` clean.
 - [ ] All 12 new tests (2 unit + 6 + 6 integration) PASS.
 - [ ] Phase 1 green bar still PASSES.
 
@@ -399,7 +440,7 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
 
 - [ ] **Step 3.1: shadcn add (Sheet + Separator + Input + Label + RadioGroup)**:
   ```bash
-  npx shadcn@latest add sheet separator input label radio-group
+  pnpm dlx shadcn@latest add sheet separator input label radio-group
   ```
   Verify the components land in `src/components/ui/`.
 
@@ -478,21 +519,21 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
 
 - [ ] **Step 3.12: Write `tests/integration/orders-query.test.ts`** (3 tests per [Testing LLD §6.3](./AuraStore_Testing_LLD_Phase2.md)):
   - `getOrdersForUser`, `getOrderByDocumentId` (owner check + null for other user).
-  - Run: `npx vitest run tests/integration/orders-query.test.ts` → PASS.
+  - Run: `pnpm vitest run tests/integration/orders-query.test.ts` → PASS.
 
 - [ ] **Step 3.13: Write `tests/unit/useRemoveFromCart.test.ts`** (2 tests per [Testing LLD §5.7](./AuraStore_Testing_LLD_Phase2.md)):
-  - Run: `npx vitest run tests/unit/useRemoveFromCart.test.ts` → PASS.
+  - Run: `pnpm vitest run tests/unit/useRemoveFromCart.test.ts` → PASS.
 
 - [ ] **Step 3.14: Write `tests/unit/CartDrawer.test.tsx`** (component test — uses stubbed cartUI + sonner spy):
   - Empty state shows "Your cart is empty" + CTA.
   - Non-empty shows items + subtotal.
-  - Run: `npx vitest run tests/unit/CartDrawer.test.tsx` → PASS.
+  - Run: `pnpm vitest run tests/unit/CartDrawer.test.tsx` → PASS.
 
 ### Verification
 
-- [ ] `npx tsc --noEmit` clean.
-- [ ] `npx vitest run` → all Phase 1 + Phase 2 tests so far PASS (10 + 12 + 5 = 27 from Stages 1–3 = 27; the unit subtotal so far is 16, integration is 8 → 24 with one overlap accounted for; see §9 reconciliation).
-- [ ] Manual smoke: `npm run dev` → click cart icon on `/products` → drawer opens; add product → badge increments.
+- [ ] `pnpm exec tsc --noEmit` clean.
+- [ ] `pnpm vitest run` → all Phase 1 + Phase 2 tests so far PASS (10 + 12 + 5 = 27 from Stages 1–3 = 27; the unit subtotal so far is 16, integration is 8 → 24 with one overlap accounted for; see §9 reconciliation).
+- [ ] Manual smoke: `pnpm dev` → click cart icon on `/products` → drawer opens; add product → badge increments.
 
 ### Commit
 
@@ -546,7 +587,12 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
   import Script from "next/script";
   import { useEffect, useRef } from "react";
 
-  type Props = { orderId: string; amount: number; orderDocumentId: string; email: string };
+  type Props = {
+    orderId: string;            // Razorpay `order_id` (returned by /api/orders/create)
+    amount: number;            // **paise** — passed directly to window.Razorpay
+    orderDocumentId: string;   // Strapi `Order.documentId`
+    email: string;
+  };
   export function RazorpayCheckout({ orderId, amount, orderDocumentId, email }: Props) {
     const openedRef = useRef(false);
     useEffect(() => {
@@ -613,18 +659,18 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
 
 - [ ] **Step 4.8: Write `tests/integration/auth-guard.test.ts`** (2 tests per [Testing LLD §6.4](./AuraStore_Testing_LLD_Phase2.md)):
   - `/checkout` and `/orders` redirect to `/sign-in` when unauthenticated.
-  - Run: `npx vitest run tests/integration/auth-guard.test.ts` → PASS.
+  - Run: `pnpm vitest run tests/integration/auth-guard.test.ts` → PASS.
 
 - [ ] **Step 4.9: Write `tests/integration/checkout-flow.test.tsx`** (2 tests per [Testing LLD §6.5](./AuraStore_Testing_LLD_Phase2.md)):
   - MSW overrides `POST /api/orders/create` per test.
-  - Run: `npx vitest run tests/integration/checkout-flow.test.tsx` → PASS.
+  - Run: `pnpm vitest run tests/integration/checkout-flow.test.tsx` → PASS.
 
 - [ ] **Step 4.10: Write `tests/unit/AddressForm.test.tsx`** (4 tests per [Testing LLD §5.3](./AuraStore_Testing_LLD_Phase2.md)):
-  - Run: `npx vitest run tests/unit/AddressForm.test.tsx` → PASS.
+  - Run: `pnpm vitest run tests/unit/AddressForm.test.tsx` → PASS.
 
 ### Verification
 
-- [ ] `npx tsc --noEmit` clean.
+- [ ] `pnpm exec tsc --noEmit` clean.
 - [ ] All new tests PASS.
 - [ ] Manual: signed in → `/checkout` → fill form → click "Continue to payment" → Razorpay modal opens (Test Mode).
 - [ ] Manual: signed out → `/checkout` → redirected to `/sign-in?redirect_url=/checkout`.
@@ -680,10 +726,16 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
   import { getOrderByDocumentId } from "@/lib/orders";
   import { OrderDetail } from "@/components/orders/OrderDetail";
 
-  export default async function OrderDetailPage({ params }: { params: { documentId: string } }) {
+  // Next.js 16: params is `Promise<...>` and must be awaited.
+  export default async function OrderDetailPage({
+    params,
+  }: {
+    params: Promise<{ documentId: string }>;
+  }) {
     const { userId } = await auth();
-    if (!userId) redirect(`/sign-in?redirect_url=/orders/${params.documentId}`);
-    const order = await getOrderByDocumentId(userId, params.documentId);
+    if (!userId) redirect("/sign-in"); // sign-in to /orders/[documentId] is dynamic, not strict-needed
+    const { documentId } = await params;
+    const order = await getOrderByDocumentId(userId, documentId);
     if (!order) notFound();
     return <OrderDetail order={order} />;
   }
@@ -697,10 +749,10 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
   - Payment status (Razorpay payment id, if present).
 
 - [ ] **Step 5.6: Create `src/app/checkout/confirmation/page.tsx`** (Server Component, auth-protected):
-  - Reads `?order_id=<documentId>` and `?cleared=1`.
-  - Calls `getOrderByDocumentId(userId, documentId)`.
+  - Next.js 16: `searchParams: Promise<{ order_id?: string; cleared?: string }>` — must be `await`-ed.
+  - Signature: `async function ConfirmationPage({ searchParams }: { searchParams: Promise<{ order_id?: string; cleared?: string }> }) { const { userId } = await auth(); if (!userId) redirect("/sign-in"); const { order_id, cleared } = await searchParams; if (!order_id) notFound(); const order = await getOrderByDocumentId(userId, order_id); if (!order) notFound(); return /* …returns one of three branches…*/; }`.
   - Renders one of three branches:
-    - `status === "paid"` → `<OrderConfirmation order={...} />`.
+    - `status === "paid"` → `<OrderConfirmation order={...} shouldClearCart={cleared === "1"} />` (passing the flag down so the client island can act).
     - `status === "pending"` → `<PaymentProcessing />` (auto-refresh every 3 s via a tiny client component, up to 10 attempts).
     - `status === "failed"` → `<PaymentFailed />` with "Retry checkout" link.
     - `null` (not found) → `notFound()`.
@@ -710,23 +762,33 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
   - "View your orders" CTA → `/orders`.
 
 - [ ] **Step 5.8: Clear the cart on confirmation**:
-  - In `RazorpayCheckout.tsx` (Stage 4), the `handler` already navigates with `?cleared=1`.
-  - Add a small client island in `/checkout/confirmation/page.tsx` that, on mount, reads `searchParams.cleared === "1"` and calls `cartStore.clear()` (then removes the query param via `router.replace`).
+  - The Server Component cannot touch `localStorage`; create **`src/components/orders/ClearCartOnMount.tsx`**:
+    ```tsx
+    "use client";
+    import { useEffect } from "react";
+    import { cartStore } from "@/lib/cart";
+    export function ClearCartOnMount({ shouldClear }: { shouldClear: boolean }) {
+      useEffect(() => { if (shouldClear) cartStore.clear(); }, [shouldClear]);
+      return null;
+    }
+    ```
+  - In the Server Component, render `<ClearCartOnMount shouldClear={cleared === "1"} />` only inside the `status === "paid"` branch (avoid clearing on failed/pending renders).
+  - `RazorpayCheckout.tsx`'s `handler` (Stage 4) navigates with `?cleared=1` so this only fires after a successful Razorpay callback.
 
 ### Test Cases (AGENT)
 
 - [ ] **Step 5.9: Write `tests/unit/confirmation.test.tsx`** (2 tests):
   - Renders order info when `status === "paid"`.
   - Renders "Payment processing…" when `status === "pending"`.
-  - Run: `npx vitest run tests/unit/confirmation.test.tsx` → PASS.
+  - Run: `pnpm vitest run tests/unit/confirmation.test.tsx` → PASS.
 
 - [ ] **Step 5.10: Write `tests/unit/OrderHistoryPage.test.tsx`** (2 tests):
   - Empty state; non-empty list renders `<OrderCard />` per order.
-  - Run: `npx vitest run tests/unit/OrderHistoryPage.test.tsx` → PASS.
+  - Run: `pnpm vitest run tests/unit/OrderHistoryPage.test.tsx` → PASS.
 
 ### Verification
 
-- [ ] `npx tsc --noEmit` clean.
+- [ ] `pnpm exec tsc --noEmit` clean.
 - [ ] All new tests PASS.
 - [ ] Manual: place an order via Test Mode → `/checkout/confirmation` → "Order confirmed" → `/orders` shows the order.
 
@@ -773,7 +835,9 @@ If any item fails, **stop** and complete [Prerequisites](./AuraStore_Prerequisit
   - Confirm `playwright.config.ts` `globalSetup` calls `clerkSetup()` (carried from Phase 1).
 
 - [ ] **Step 6.4: Ensure Strapi is running + seeded** before E2E:
-  - Add npm script: `"pretest:e2e:phase2": "cd backend && npm run develop &"` — **better**: document in the README that E2E assumes Strapi is up; CI spins up Strapi in `globalSetup` (see Stage 7).
+  - **Local (recommended):** `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\strapi-start.ps1` — the script is idempotent (exits 0 if Strapi is already listening on `:1337`) and waits for `/_health` to return 204 before exiting. Do NOT add `pretest:e2e:phase2: cd backend && npm run develop &` to `package.json` — PowerShell 5.1 on Windows rejects Bash `&` as a background-suffix and `cross-env` doesn't paper over it. The script encapsulates the same intent with `Start-Process`.
+  - **Local (alternative):** use the Kilo `background_process` tool with `command: "cd backend && npm run develop"` and a `ready` pattern that matches Strapi's startup line (`Strapi started successfully`) or its `/_health` probe.
+  - **CI** (Stage 7.1 Step 1): uses `nohup npm run develop` on `ubuntu-latest` (bash), where `&` works. Local should NOT rely on the same syntax.
 
 ### Test Cases (AGENT)
 
@@ -781,28 +845,28 @@ Write each spec under `tests/e2e/phase2/`:
 
 - [ ] **Step 6.5: `tests/e2e/phase2/cart.spec.ts`** (3 tests per [Testing LLD §7.1](./AuraStore_Testing_LLD_Phase2.md)):
   - Add → badge; drawer open + inc/dec/remove; empty state.
-  - Run: `npx playwright test tests/e2e/phase2/cart.spec.ts` → PASS.
+  - Run: `pnpm playwright test tests/e2e/phase2/cart.spec.ts` → PASS.
 
 - [ ] **Step 6.6: `tests/e2e/phase2/cart-persistence.spec.ts`** (1 test):
-  - Run: `npx playwright test tests/e2e/phase2/cart-persistence.spec.ts` → PASS.
+  - Run: `pnpm playwright test tests/e2e/phase2/cart-persistence.spec.ts` → PASS.
 
 - [ ] **Step 6.7: `tests/e2e/phase2/auth-guard.spec.ts`** (1 test):
-  - Run: `npx playwright test tests/e2e/phase2/auth-guard.spec.ts` → PASS.
+  - Run: `pnpm playwright test tests/e2e/phase2/auth-guard.spec.ts` → PASS.
 
 - [ ] **Step 6.8: `tests/e2e/phase2/checkout.spec.ts`** (1 test):
-  - Run: `npx playwright test tests/e2e/phase2/checkout.spec.ts` → PASS.
+  - Run: `pnpm playwright test tests/e2e/phase2/checkout.spec.ts` → PASS.
 
 - [ ] **Step 6.9: `tests/e2e/phase2/payment.spec.ts`** (2 tests):
   - Success card `4111 1111 1111 1111`; failure card `4000 0000 0000 0002`.
-  - Run: `npx playwright test tests/e2e/phase2/payment.spec.ts` → PASS.
+  - Run: `pnpm playwright test tests/e2e/phase2/payment.spec.ts` → PASS.
 
 - [ ] **Step 6.10: `tests/e2e/phase2/orders.spec.ts`** (2 tests):
-  - Run: `npx playwright test tests/e2e/phase2/orders.spec.ts` → PASS.
+  - Run: `pnpm playwright test tests/e2e/phase2/orders.spec.ts` → PASS.
 
 ### Verification
 
-- [ ] `npx playwright test tests/e2e/phase2/` → all 10 PASS.
-- [ ] `npx vitest run` → all 76 PASS (35 Phase 1 + 41 Phase 2 unit + integration).
+- [ ] `pnpm playwright test tests/e2e/phase2/` → all 10 PASS.
+- [ ] `pnpm vitest run` → all 76 PASS (35 Phase 1 + 41 Phase 2 unit + integration).
 - [ ] Coverage thresholds met (stmts ≥ 80, branches ≥ 75, funcs ≥ 80, lines ≥ 80).
 - [ ] **Full pyramid: 22 unit + 19 integration + 10 e2e = 51 Phase 2 tests PASS.**
 
@@ -844,6 +908,11 @@ Write each spec under `tests/e2e/phase2/`:
       env:
         STRAPI_API_TOKEN: ${{ secrets.PHASE2_STRAPI_API_TOKEN }}
         STRAPI_API_TOKEN_WRITE: ${{ secrets.PHASE2_STRAPI_API_TOKEN_WRITE }}
+        # Admin creds only used by scripts/strapi-issue-order-token.ps1 if the token
+        # is missing on a fresh CI runner. Production CI should pre-provision the token
+        # and remove these secrets post-onboarding.
+        STRAPI_ADMIN_EMAIL: ${{ secrets.PHASE2_STRAPI_ADMIN_EMAIL }}
+        STRAPI_ADMIN_PASSWORD: ${{ secrets.PHASE2_STRAPI_ADMIN_PASSWORD }}
         RAZORPAY_KEY_ID: ${{ secrets.PHASE2_RAZORPAY_KEY_ID }}
         RAZORPAY_KEY_SECRET: ${{ secrets.PHASE2_RAZORPAY_KEY_SECRET }}
         RAZORPAY_WEBHOOK_SECRET: ${{ secrets.PHASE2_RAZORPAY_WEBHOOK_SECRET }}
@@ -860,10 +929,10 @@ Write each spec under `tests/e2e/phase2/`:
         - run: cd backend && nohup npm run develop > strapi.log &  # see Step 7.2
         - run: sleep 30 && curl -sf http://localhost:1337/_health || (cat backend/strapi.log && exit 1)
         - run: cd backend && npm run seed && npm run seed:orders
-        - run: npx tsc --noEmit
-        - run: npx vitest run --coverage
-        - run: npx playwright install --with-deps chromium
-        - run: npx playwright test tests/e2e/phase2/
+        - run: pnpm exec tsc --noEmit
+        - run: pnpm vitest run --coverage
+        - run: pnpm playwright install --with-deps chromium
+        - run: pnpm playwright test tests/e2e/phase2/
   ```
 
 - [ ] **Step 7.2: Strapi readiness probe** (avoid the AGENTS.md G4 "no polling loops" trap):
@@ -940,11 +1009,13 @@ Write each spec under `tests/e2e/phase2/`:
 
 | # | Item | Action |
 |---|------|--------|
-| O1 | Issue a second Strapi API token `Order writer` (`Write`+`Update` on `Order` only) → store as `STRAPI_API_TOKEN_WRITE`. The Phase 1 `STRAPI_API_TOKEN` stays read-only on `Product`+`Category` (least-privilege). See Stage 1.2c. | One-shot, dashboard action, no human in the loop after the agent has admin URL access. |
+| O1 | ~~Issue the `Order writer` API token.~~ **RESOLVED** (see Stage 1.2c). The agent now issues the token through `scripts\strapi-issue-order-token.ps1` — idempotent, documents the canonical endpoints, prints the accessKey, and offers `-AddOrderToken` to append to `.env.local` in one shot. | n/a |
 | O2 | Razorpay webhook URL changes whenever the tunnel restarts (e.g. ngrok free tier). | Document in README; re-update the dashboard webhook each tunnel restart. CI uses a synthetic payload; no live webhook needed. |
 | O3 | "Add to cart" button on `ProductCard` makes it a Client Component. | If size becomes a concern, extract a `<ProductCardAddToCart />` island; the rest of `ProductCard` can stay server-rendered. |
 | O4 | Sonner toast assertions depend on `vi.spyOn(toast, ...)`. | Document in the test setup README; tests rely on this pattern. |
 | O5 | Phase 3 will introduce Framer Motion and re-style the drawer. | Phase 2 ships a non-animated drawer; do not add `framer-motion` in Phase 2. |
+| O6 | **PowerShell 5.1 quirks** (added July 22): always invoke `.ps1` with `powershell -NoProfile -ExecutionPolicy Bypass -File …`; the scripts must use ASCII punctuation (`--`/`->`/`and`) and avoid the `??` operator and `&&` token. The `write` tool encodes UTF-8; em-dashes / right-arrows become mojibake in PS parser. See memory `aurastore.powershell_5_1_script_mojibake`. | Future agents: keep these constraints in mind when extending scripts. |
+| O7 | **Strapi bring-up is the agent's responsibility**, per memory `aurastore.phase2.agent_runs_strapi`. The three `scripts\strapi-*.ps1` helpers codify this so the agent doesn't repeatedly probe for state. | n/a |
 
 ---
 
@@ -956,4 +1027,4 @@ Write each spec under `tests/e2e/phase2/`:
 ---
 
 *This plan defines the staged execution (WHAT, in what order) for Phase 2. Full design lives in [Phase 2 LLD](./AuraStore_LLD_Phase2.md); full test design lives in [Phase 2 Testing LLD](./AuraStore_Testing_LLD_Phase2.md); human-only prerequisites live in [Phase 2 Prerequisites](./AuraStore_Prerequisites_Phase2.md).*
-*Last updated: July 21, 2026*
+*Last updated: July 22, 2026*
