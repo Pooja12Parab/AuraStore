@@ -13,6 +13,7 @@
     "strapi": "strapi",
     "upgrade": "npx @strapi/upgrade latest",
     "seed": "tsx scripts/seed.ts",
+    "seed:orders": "tsx scripts/seed-orders.ts",
     "upgrade:dry": "npx @strapi/upgrade latest --dry"
   },
   "dependencies": {

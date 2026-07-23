@@ -1,0 +1,25 @@
+﻿{
+  "kind": "collectionType",
+  "collectionName": "orders",
+  "info": {
+    "singularName": "order",
+    "pluralName": "orders",
+    "displayName": "Order",
+    "description": "Customer orders created at checkout, updated by the Razorpay webhook."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "clerkUserId":     { "type": "string", "required": true, "indexed": true },
+    "items":           { "type": "json", "required": true },
+    "total":           { "type": "decimal", "required": true, "min": 0 },
+    "status":          { "type": "enumeration", "enum": ["pending", "paid", "failed", "refunded"], "default": "pending", "required": true },
+    "paymentId":       { "type": "string" },
+    "razorpayOrderId": { "type": "string", "indexed": true, "unique": true },
+    "address":         { "type": "json", "required": true },
+    "email":           { "type": "email", "required": true },
+    "phone":           { "type": "string" }
+  }
+}
