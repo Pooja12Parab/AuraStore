@@ -1,12 +1,14 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { z } from 'zod'
 import {
   CheckoutInputSchema,
   createOrderForCheckout,
 } from '@/lib/orders'
 
-export const runtime = 'nodejs'
+// Note: do NOT export `runtime = 'nodejs'` here — Next.js 16 with
+// cacheComponents (PPR) rejects explicit runtime declarations on route
+// handlers. Node APIs like `node:crypto` (used by lib/razorpay-webhook)
+// are available in the default Node.js runtime that Next 16 selects.
 
 export async function POST(req: Request) {
   const { userId } = await auth()

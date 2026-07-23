@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { verifyRazorpaySignature } from '@/lib/razorpay-webhook'
 import { markOrderPaid, markOrderFailed } from '@/lib/orders'
 
-export const runtime = 'nodejs'
+// See orders/create/route.ts for why we do not declare `runtime = 'nodejs'`.
 
 type RazorpayEvent = {
   event?: string
