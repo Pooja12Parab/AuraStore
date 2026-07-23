@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+﻿﻿import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ShoppingBag, Truck, Lock, RotateCcw } from 'lucide-react'
 import { auth } from '@clerk/nextjs/server'
@@ -38,7 +38,7 @@ export default async function OrdersPage() {
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {orders.length === 0
-            ? 'No orders yet — but that\u2019s about to change.'
+            ? 'No orders yet — but that’s about to change.'
             : `${orders.length} ${orders.length === 1 ? 'order' : 'orders'} on file`}
         </p>
       </header>

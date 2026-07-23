@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next'
+﻿﻿import type { Metadata } from 'next'
 import { Clock, Mail, MapPin, MessageCircle, Phone, Sparkles } from 'lucide-react'
 import { ContactForm } from '@/components/contact/contact-form'
 
@@ -52,11 +52,11 @@ export default function ContactPage() {
             <span>We read every message</span>
           </span>
           <h1 className="mt-5 text-balance text-4xl font-semibold tracking-tight text-foreground sm:text-5xl md:text-6xl">
-            We\u2019re here to help
+            We’re here to help
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-pretty text-base text-muted-foreground sm:text-lg">
             Have a question about an order, a product, or the AuraStore demo?
-            Pick the channel that works for you \u2014 we typically reply within
+            Pick the channel that works for you — we typically reply within
             one business day.
           </p>
         </div>
@@ -75,7 +75,7 @@ export default function ContactPage() {
             </h2>
             <p className="mt-2 text-muted-foreground text-pretty">
               Most customers hear back within an hour during business
-              hours. Our support team reads every message themselves \u2014 no
+              hours. Our support team reads every message themselves — no
               chatbots.
             </p>
             <ul className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -109,7 +109,7 @@ export default function ContactPage() {
             <div className="mt-6 inline-flex items-center gap-2 rounded-md border border-border bg-surface/60 px-3 py-2 text-xs text-muted-foreground">
               <Clock className="h-3.5 w-3.5" aria-hidden />
               <span>
-                Mon\u2013Fri 10:00\u201318:00 IST \u00b7 Sat 10:00\u201314:00 IST \u00b7 Sun closed
+                Mon\u2013Fri 10:00\u201318:00 IST · Sat 10:00\u201314:00 IST · Sun closed
               </span>
             </div>
           </div>
@@ -120,7 +120,7 @@ export default function ContactPage() {
               Send a message
             </h2>
             <p className="mt-2 text-muted-foreground text-pretty">
-              We\u2019ll get back to you within one business day. For order
+              We’ll get back to you within one business day. For order
               questions, please include your order ID.
             </p>
             <div className="mt-8">

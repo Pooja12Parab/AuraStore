@@ -1,4 +1,4 @@
-'use client'
+﻿﻿'use client'
 
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
@@ -23,7 +23,7 @@ export function ContactForm() {
     // Phase 2 has no live contact API. Submit triggers a Sonner toast and
     // resets the form so the user sees a real success state.
     await new Promise((r) => setTimeout(r, 400))
-    toast.success('Thanks! We\u2019ll get back to you within one business day.')
+    toast.success('Thanks! We’ll get back to you within one business day.')
     ;(e.currentTarget as HTMLFormElement).reset()
     setSubmitting(false)
   }
@@ -67,7 +67,7 @@ export function ContactForm() {
       </div>
 
       <fieldset>
-        <legend className="mb-1.5 block text-sm font-medium">What\u2019s this about?</legend>
+        <legend className="mb-1.5 block text-sm font-medium">What’s this about?</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {SUBJECTS.map((s) => (
             <label

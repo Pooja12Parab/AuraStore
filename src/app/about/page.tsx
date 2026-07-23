@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next'
+﻿﻿import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowRight, Leaf, Package, ShieldCheck, Sparkles, Truck, Users } from 'lucide-react'
 
@@ -43,7 +43,7 @@ const VALUES = [
   {
     icon: Package,
     title: '30-day easy returns',
-    body: 'Didn\u2019t love it? Send it back within 30 days for a full refund. We pay the return shipping label.',
+    body: 'Didn’t love it? Send it back within 30 days for a full refund. We pay the return shipping label.',
   },
 ]
 
@@ -51,7 +51,7 @@ const TIMELINE = [
   {
     year: '2024',
     title: 'AuraStore is born',
-    body: 'Founded in a 1-bedroom apartment with three employees, one warehouse, and a manifesto that said: "stop selling people things they don\u2019t need."',
+    body: 'Founded in a 1-bedroom apartment with three employees, one warehouse, and a manifesto that said: "stop selling people things they don’t need."',
   },
   {
     year: '2025',
@@ -93,8 +93,8 @@ export default function AboutPage() {
             </h1>
             <p className="mt-5 max-w-xl text-pretty text-base text-muted-foreground sm:text-lg">
               AuraStore started in 2024 with a simple question: why do most
-              online stores feel like a thousand-yard aisle of stuff you don\u2019t
-              want? We chose curation over catalog, and we\u2019ve been rewarded
+              online stores feel like a thousand-yard aisle of stuff you don’t
+              want? We chose curation over catalog, and we’ve been rewarded
               with customers who care about what they buy.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-3">
@@ -142,13 +142,13 @@ export default function AboutPage() {
           Our mission
         </p>
         <h2 className="mt-3 text-balance text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-          Make it easy to buy things you\u2019ll keep.
+          Make it easy to buy things you’ll keep.
         </h2>
         <p className="mt-5 text-pretty text-base text-muted-foreground sm:text-lg">
           E-commerce has become a chore. Endless scrolling, dubious reviews,
           subscriptions you forgot about. We think buying things should be
-          quick, transparent, and satisfying. So we\u2019ve built AuraStore to be
-          the store we\u2019d want to use ourselves.
+          quick, transparent, and satisfying. So we’ve built AuraStore to be
+          the store we’d want to use ourselves.
         </p>
       </section>
 
@@ -163,7 +163,7 @@ export default function AboutPage() {
               What we care about
             </h2>
             <p className="mt-3 text-pretty text-muted-foreground">
-              Six principles that shape every decision we make \u2014 from what
+              Six principles that shape every decision we make — from what
               we stock to how we ship it.
             </p>
           </div>
@@ -224,7 +224,7 @@ export default function AboutPage() {
             Like what you see?
           </h2>
           <p className="mt-3 text-pretty text-muted-foreground">
-            Browse the catalog or reach out \u2014 we love hearing from
+            Browse the catalog or reach out — we love hearing from
             customers.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
