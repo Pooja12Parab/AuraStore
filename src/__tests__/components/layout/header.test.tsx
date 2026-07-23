@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+﻿import { describe, it, expect } from 'vitest'
 import { screen } from '@testing-library/react'
 import { Header } from '@/components/layout/header'
 import { renderWithProviders } from '@/__tests__/utils/render-with-providers'
@@ -21,8 +21,8 @@ describe('Header', () => {
     expect(screen.getByText('Sign in')).toBeInTheDocument()
   })
 
-  it('renders inert cart-slot testid (Phase 2 seam)', () => {
+  it('renders the cart icon button (Phase 2 wiring)', () => {
     renderWithProviders(<Header />)
-    expect(screen.getByTestId('cart-slot')).toBeInTheDocument()
+    expect(screen.getByTestId('cart-icon-button')).toBeInTheDocument()
   })
 })

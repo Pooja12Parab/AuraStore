@@ -1,6 +1,7 @@
-import Link from 'next/link'
+﻿import Link from 'next/link'
 import { Nav } from './nav'
 import { AuthSection } from './auth-section'
+import { CartIconButton } from '@/components/cart/cart-icon-button'
 
 export function Header() {
   return (
@@ -11,9 +12,7 @@ export function Header() {
         </Link>
         <Nav />
         <div className="flex items-center gap-4">
-          <div aria-hidden="true" className="pointer-events-none opacity-0">
-            <span data-testid="cart-slot" />
-          </div>
+          <CartIconButton />
           <AuthSection />
         </div>
       </div>

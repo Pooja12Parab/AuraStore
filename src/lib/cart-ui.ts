@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useSyncExternalStore } from 'react'
 
@@ -38,17 +38,29 @@ function subscribe(listener: () => void): () => void {
 
 const serverSnapshot = (): boolean => false
 
-export function useCartUI(): {
+type CartUiSnapshot = {
   isOpen: boolean
   open(): void
   close(): void
   toggle(): void
-} {
-  const open = useSyncExternalStore(subscribe, cartUI.getSnapshot, serverSnapshot)
-  return {
-    isOpen: open,
-    open: cartUI.open,
-    close: cartUI.close,
-    toggle: cartUI.toggle,
+}
+
+export function useCartUI(): CartUiSnapshot
+export function useCartUI<T>(selector: (s: CartUiSnapshot) => T): T
+export function useCartUI<T>(selector?: (s: CartUiSnapshot) => T): T | CartUiSnapshot {
+  const isOpenValue = useSyncExternalStore(subscribe, cartUI.getSnapshot, serverSnapshot)
+  if (!selector) {
+    return {
+      isOpen: isOpenValue,
+      open: () => cartUI.open(),
+      close: () => cartUI.close(),
+      toggle: () => cartUI.toggle(),
+    } satisfies CartUiSnapshot
   }
+  return selector({
+    isOpen: isOpenValue,
+    open: () => cartUI.open(),
+    close: () => cartUI.close(),
+    toggle: () => cartUI.toggle(),
+  })
 }
