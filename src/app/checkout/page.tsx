@@ -1,4 +1,4 @@
-﻿import { redirect } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
 import { CheckoutClient } from '@/components/checkout/checkout-client'
 

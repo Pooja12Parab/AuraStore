@@ -48,8 +48,11 @@ describe('ProductCard', () => {
 
   it('renders link to product detail page', () => {
     render(<ProductCard product={mockProduct} />)
-    const link = screen.getByRole('link')
-    expect(link).toHaveAttribute('href', '/products/wireless-headphones')
+    // Card has two anchors (image link + name link) pointing to the same
+    // product page; verify the first one is the detail link.
+    const links = screen.getAllByRole('link')
+    expect(links.length).toBeGreaterThan(0)
+    expect(links[0]).toHaveAttribute('href', '/products/wireless-headphones')
   })
 
   it('shows missing image fallback when no images', () => {

@@ -1,4 +1,4 @@
-﻿import { db } from './factories'
+import { db } from './factories'
 
 export function seedTestData() {
   const electronics = db.category.create({

@@ -36,3 +36,10 @@ export function strapiMedia(image: { url: string }): string {
   if (image.url.startsWith('http')) return image.url
   return `${STRAPI_URL}${image.url}`
 }
+
+export async function fetchFeaturedProducts() {
+  return strapiFetch<{ data: unknown[] }>(
+    '/products?filters[featured][$eq]=true&populate=*&pagination[pageSize]=8',
+    { cache: 'no-store' },
+  )
+}

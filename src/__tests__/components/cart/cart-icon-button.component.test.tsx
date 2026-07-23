@@ -1,4 +1,4 @@
-﻿import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { renderWithProviders } from '@/__tests__/utils/render-with-providers'
 import { cartStore } from '@/lib/cart'
 import { CartIconButton } from '@/components/cart/cart-icon-button'

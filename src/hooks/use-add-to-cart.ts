@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useCallback } from 'react'
 import { toast } from 'sonner'

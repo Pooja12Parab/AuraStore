@@ -24,28 +24,75 @@
   --color-destructive: var(--destructive);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
   --radius: 0.625rem;
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  /* Surfaces */
+  --background: oklch(0.99 0.005 250);
+  --foreground: oklch(0.18 0.02 270);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.18 0.02 270);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --popover-foreground: oklch(0.18 0.02 270);
+  --surface: oklch(0.96 0.012 250);
+  --surface-foreground: oklch(0.32 0.02 270);
+
+  /* Brand: deep indigo with a violet shift */
+  --brand-50:  oklch(0.97 0.014 280);
+  --brand-100: oklch(0.93 0.030 280);
+  --brand-200: oklch(0.86 0.060 280);
+  --brand-300: oklch(0.78 0.090 280);
+  --brand-400: oklch(0.68 0.130 280);
+  --brand-500: oklch(0.58 0.180 280);
+  --brand-600: oklch(0.50 0.205 280);
+  --brand-700: oklch(0.42 0.180 280);
+  --brand-800: oklch(0.34 0.140 280);
+  --brand-900: oklch(0.26 0.090 280);
+
+  --primary: var(--brand-600);
+  --primary-foreground: oklch(0.99 0.005 280);
+
+  --secondary: oklch(0.95 0.020 250);
+  --secondary-foreground: oklch(0.26 0.090 280);
+
+  --muted: oklch(0.95 0.012 250);
+  --muted-foreground: oklch(0.50 0.018 270);
+
+  --accent: var(--brand-50);
+  --accent-foreground: var(--brand-700);
+
+  --destructive: oklch(0.58 0.215 27);
+  --destructive-foreground: oklch(0.99 0 0);
+
+  --border: oklch(0.91 0.012 260);
+  --input: oklch(0.91 0.012 260);
+  --ring: var(--brand-500);
+
+  --success: oklch(0.66 0.130 160);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.78 0.155 75);
+  --warning-foreground: oklch(0.20 0.04 75);
+  --info: oklch(0.65 0.130 235);
+  --info-foreground: oklch(0.99 0 0);
 }
 
 @layer base {
@@ -53,6 +100,46 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+  ::selection {
+    background-color: var(--brand-200);
+    color: var(--brand-900);
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+}
+
+/* Brand-aware scrollbar (WebKit + Firefox) */
+@layer base {
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb {
+    background: var(--brand-200);
+    border-radius: 9999px;
+    border: 2px solid var(--surface);
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--brand-300); }
+  * { scrollbar-color: var(--brand-200) var(--surface); scrollbar-width: thin; }
+}
+
+/* Subtle gradient surface for hero / featured panels */
+@layer utilities {
+  .bg-brand-gradient {
+    background:
+      radial-gradient(80% 60% at 20% 10%, var(--brand-100) 0%, transparent 60%),
+      radial-gradient(70% 60% at 90% 30%, var(--brand-200) 0%, transparent 60%),
+      linear-gradient(180deg, var(--background) 0%, var(--surface) 100%);
+  }
+  .bg-brand-tint {
+    background: linear-gradient(135deg, var(--brand-50) 0%, var(--surface) 100%);
+  }
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+  .ring-focus {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
 }

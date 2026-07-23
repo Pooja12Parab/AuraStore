@@ -1,4 +1,4 @@
-﻿import { http, HttpResponse } from 'msw'
+import { http, HttpResponse } from 'msw'
 import { db, orderPaidFixture, orderPendingFixture, type OrderSeedData } from './factories'
 
 const STRAPI = 'http://localhost:1337'

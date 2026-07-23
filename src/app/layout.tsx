@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next'
+import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
 import { Suspense } from 'react'
@@ -31,12 +31,15 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-        <body>
+      <html
+        lang="en"
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <body className="min-h-dvh flex flex-col bg-background text-foreground">
           <Suspense fallback={null}>
             <QueryProvider>
               <Header />
-              <main>{children}</main>
+              <main className="flex-1">{children}</main>
               <Footer />
               <CartDrawer />
               <Toaster richColors position="top-right" />

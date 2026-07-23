@@ -1,4 +1,4 @@
-﻿import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useEffect } from 'react'
 import { cartStore } from '@/lib/cart'
 import { renderWithProviders } from '@/__tests__/utils/render-with-providers'

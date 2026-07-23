@@ -1,4 +1,4 @@
-﻿import { createStrapi, type Core } from '@strapi/strapi';
+import { createStrapi, type Core } from '@strapi/strapi';
 
 const SEED_USER = 'user_test_123';
 

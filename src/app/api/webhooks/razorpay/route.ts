@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { verifyRazorpaySignature } from '@/lib/razorpay-webhook'
 import { markOrderPaid, markOrderFailed } from '@/lib/orders'
 
